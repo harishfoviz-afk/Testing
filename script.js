@@ -2343,3 +2343,6 @@ document.addEventListener('DOMContentLoaded', () => {
         calculateCostOfConfusion();
     }
 });
+// Explicit Window Exports for Quiz and Sync Gate
+window.initializeQuizShell = initializeQuizShell;
+window.startSyncMatchNow = startSyncMatchNow;

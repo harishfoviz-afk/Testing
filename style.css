@@ -72,7 +72,7 @@ body {
 }
 
 /* UI FOR QUESTION PAGE */
-.question-page { display: none; min-height: 100vh; background: #fff; padding: 0; flex-direction: column; }
+.question-page { position: relative; z-index: 9999; display: none; min-height: 100vh; background: #fff; padding: 0; flex-direction: column; }
 .active { display: flex !important; visibility: visible !important; opacity: 1 !important; }
 
 .question-content-wrapper { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; width: 100%; }

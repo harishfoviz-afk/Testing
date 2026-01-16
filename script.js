@@ -675,6 +675,9 @@ function openCollaborationModal(type) {
 }
 
 function goToLandingPage() {
+    document.getElementById("react-hero-root").style.display = "block";
+    document.getElementById("landingContentWrapper").style.display = "block";
+    document.getElementById("mainFooter").style.display = "block";
     const heroRoot = document.getElementById('react-hero-root');
     if (heroRoot) heroRoot.style.display = 'block';
     const landingPage = document.getElementById('landingPage');
@@ -983,6 +986,9 @@ function proceedToQuiz(pkg, price) {
 
 
 function initializeQuizShell(index, phase = 0) {
+    document.getElementById("react-hero-root").style.display = "none";
+    document.getElementById("landingContentWrapper").style.display = "none";
+    document.getElementById("mainFooter").style.display = "none";
     const heroRoot = document.getElementById('react-hero-root');
     if (heroRoot) heroRoot.style.display = 'none';
     const landingPage = document.getElementById('landingPage');

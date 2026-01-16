@@ -743,9 +743,10 @@ function openSyncMatchGate() {
 }
 
 function validateAndStartSyncMatch() {
+    const startBtn = document.getElementById('startSyncBtn');
     const orderIdInput = document.getElementById('syncOrderId');
     const ageInput = document.getElementById('syncChildAge');
-    const startBtn = document.getElementById('startSyncBtn'); // Define here for global scope within function
+      // Define here for global scope within function
     const orderId = orderIdInput ? orderIdInput.value.trim() : '';
 
     if(!orderId || orderId.length < 3) {
@@ -799,6 +800,8 @@ function injectVisionMarkers(boardName) {
 }
 
 function confirmManualSync() {
+    const manualSyncBlock = document.getElementById('manualSyncBlock');
+    if (manualSyncBlock) manualSyncBlock.style.display = 'none';
     const boardSelect = document.getElementById('manualBoardSelect');
     const orderIdInput = document.getElementById('syncOrderId');
     const ageInput = document.getElementById('syncChildAge');
@@ -1425,7 +1428,7 @@ function processSyncUpgrade() {
             localStorage.setItem(`aptskola_session_${customerData.orderId}`, JSON.stringify({ answers, customerData }));
 
             const upgradeBlock = document.getElementById('upgradeBlock');
-            const startBtn = document.getElementById('startSyncBtn');
+             
             
             if(upgradeBlock) upgradeBlock.classList.remove('active');
             if(startBtn) {

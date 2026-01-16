@@ -147,11 +147,12 @@ footer .policy-links a { margin: 0 8px; color: #CBD5E1; text-decoration: none; f
 /* Redirection Overlay Fix */
 #redirectLoadingOverlay {
     pointer-events: none !important;
+    z-index: 9999;
 }
 #redirectLoadingOverlay.active {
     display: flex !important;
     pointer-events: auto !important;
-    z-index: 2000;
+    z-index: 9999;
 }
 
 /* FORCE HIDE UTILITY */

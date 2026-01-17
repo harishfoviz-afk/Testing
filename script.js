@@ -909,8 +909,8 @@ function calculateFullRecommendation(ansSet) {
 
 // --- FIXED SELECT PACKAGE LOGIC ---
 function selectPackage(pkg, price) {
-    if (window.currentPhase !== 1 && window.currentPhase !== 2 && !isSyncMatchMode) {
-        alert("Please finish the assessment first.");
+    if (window.currentPhase < 1 && !isSyncMatchMode) {
+        alert("Please finish the Phase 0 assessment first.");
         return;
     }
     if (window.event) window.event.stopPropagation();
@@ -2258,63 +2258,62 @@ window.recoverSessionEmail = recoverSessionEmail;
 
 window.openCollaborationModal = openCollaborationModal;
 function showPsychometricHistogram() {
-    const app = document.getElementById('questionPageApp');
-    if (app) app.classList.remove('active');
-    
-    const container = document.getElementById('psychometricHistogram');
+    const app = document.getElementById("questionPageApp");
+    if (app) app.classList.remove("active");
+
+    const container = document.getElementById("psychometricHistogram");
     container.innerHTML = `
         <div class="details-form" style="background: white; border-radius: 16px; padding: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-grey); width: 100%; display: flex; flex-direction: column; align-items: center;">
-        <h2 class="text-3xl font-bold mb-4">DNA Snapshot: Analyzing Neural Patterns</h2>
-        <p class="text-slate-600 mb-8">We are mapping your child's cognitive architecture based on Phase 0 inputs.</p>
-        <div class="histogram-container">
-            <div class="histo-bar-wrapper">
-                <div class="histo-label"><span>Visual Processing</span><span>82%</span></div>
-                <div class="histo-track"><div class="histo-fill" style="width: 82%"></div></div>
+            <h2 class="text-3xl font-bold mb-4">DNA Snapshot: Analyzing Neural Patterns</h2>
+            <p class="text-slate-600 mb-8">We are mapping your childs cognitive architecture based on Phase 0 inputs.</p>
+            <div class="histogram-container" style="width: 100%; max-width: 500px; margin-bottom: 30px;">
+                <div class="histo-bar-wrapper" style="margin-bottom: 20px;">
+                    <div class="histo-label" style="display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600;"><span>Visual Processing</span><span>82%</span></div>
+                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="width: 82%; height: 100%; background: var(--sunrise-primary); border-radius: 6px;"></div></div>
+                </div>
+                <div class="histo-bar-wrapper" style="margin-bottom: 20px;">
+                    <div class="histo-label" style="display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600;"><span>Auditory Synthesis</span><span>45%</span></div>
+                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="width: 45%; height: 100%; background: #3B82F6; border-radius: 6px;"></div></div>
+                </div>
+                <div class="histo-bar-wrapper">
+                    <div class="histo-label" style="display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600;"><span>Kinesthetic Logic</span><span>91%</span></div>
+                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="width: 91%; height: 100%; background: #10B981; border-radius: 6px;"></div></div>
+                </div>
             </div>
-            <div class="histo-bar-wrapper">
-                <div class="histo-label"><span>Auditory Synthesis</span><span>45%</span></div>
-                <div class="histo-track"><div class="histo-fill" style="width: 45%"></div></div>
-            </div>
-            <div class="histo-bar-wrapper">
-                <div class="histo-label"><span>Kinesthetic Logic</span><span>91%</span></div>
-                <div class="histo-track"><div class="histo-fill" style="width: 91%"></div></div>
-            </div>
-        </div>
-        <button onclick="showDynamicRiskCard()" class="custom-cta-button" style="max-width: 300px;">View Misalignment Risk →</button>
+            <button onclick="showDynamicRiskCard()" class="custom-cta-button" style="max-width: 300px; width: 100%;">View Misalignment Risk →</button>
         </div>
     `;
-    container.classList.add('active');
+    container.classList.add("active");
     window.scrollTo(0,0);
+}
 } 
 
-function showDynamicRiskCard() { 
-    const containers = document.querySelectorAll(".flow-container"); 
-    containers.forEach(c => c.classList.remove("active")); 
- 
-    const q1Ans = answers["p0_q1"]; 
-    const personas = ["Visual Strategist", "Verbal Analyst", "Conceptual Learner"]; 
-    const selectedPersona = personas[q1Ans] || "Unique Learner"; 
-    const container = document.getElementById("dynamicRiskCard"); 
-    container.innerHTML = ` 
-        <div class="details-form" style="background: white; border-radius: 16px; padding: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-grey); width: 100%; display: flex; flex-direction: column; align-items: center;"> 
-        <div class="risk-card-dynamic" style="text-align: center; display: flex; flex-direction: column; align-items: center;"> 
-            <div class="risk-icon-alert" style="text-align: center; margin-bottom: 15px;">⚠️</div> 
-            <h2 class="text-2xl font-bold text-red-900 mb-2">Misalignment Alert</h2> 
-            <p class="text-red-800 mb-6">Your child is a <strong>${selectedPersona}</strong>. There is a 65% risk that a standard curriculum will suppress their natural logic processing.</p> 
-            <div style="background: white; padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 20px; width: 100%;"> 
-                <p class="text-sm font-bold text-slate-700 mb-2">Smart Parent Pro Dashboard Note:</p> 
-                <p class="text-xs text-slate-500">Phase 1 will now calibrate your specific board preferences to mitigate this risk.</p> 
-            </div> 
-            <button onclick="startPhase1()" class="custom-cta-button" style="background: #0F172A; max-width: 300px; width: 100%;">Calibrate with Phase 1 →</button> 
-        </div> 
-        </div> 
-    `; 
-    container.classList.add("active"); 
-    window.scrollTo(0,0); 
+function showDynamicRiskCard() {
+    const containers = document.querySelectorAll(".flow-container");
+    containers.forEach(c => c.classList.remove("active"));
+
+    const q1Ans = answers["p0_q1"];
+    const personas = ["Visual Strategist", "Verbal Analyst", "Conceptual Learner"];
+    const selectedPersona = personas[q1Ans] || "Unique Learner";
+
+    const container = document.getElementById("dynamicRiskCard");
+    container.innerHTML = `
+        <div class="details-form" style="background: white; border-radius: 16px; padding: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-grey); width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center;">
+            <div class="risk-card-dynamic" style="display: flex; flex-direction: column; align-items: center;">
+                <div class="risk-icon-alert" style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
+                <h2 class="text-2xl font-bold text-red-900 mb-2">Misalignment Alert</h2>
+                <p class="text-red-800 mb-6">Your child is a <strong>${selectedPersona}</strong>. There is a 65% risk that a standard curriculum will suppress their natural logic processing.</p>
+                <div style="background: #FEF2F2; padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 25px; width: 100%; border: 1px solid #FEE2E2;">
+                    <p class="text-sm font-bold text-red-900 mb-2">Smart Parent Pro Dashboard Note:</p>
+                    <p class="text-xs text-red-700">Phase 1 will now calibrate your specific board preferences to mitigate this risk.</p>
+                </div>
+                <button onclick="startPhase1()" class="custom-cta-button" style="background: #0F172A; max-width: 300px; width: 100%;">Calibrate with Phase 1 →</button>
+            </div>
+        </div>
+    `;
+    container.classList.add("active");
+    window.scrollTo(0,0);
 }
-function startPhase1() {
-    window.currentPhase = 1;
-    initializeQuizShell(0, 1);
 }
 
  

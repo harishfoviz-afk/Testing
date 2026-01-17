@@ -1036,6 +1036,9 @@ function renderQuestionContent(index) {
     const totalQ = questions.length;
 
     if (index >= totalQ) {
+            document.getElementById("react-hero-root").style.display = "none";
+            document.getElementById("landingPage").style.display = "none";
+            window.scrollTo({ top: 0, behavior: "instant" });
         if (window.currentPhase === 0) {
             showPsychometricHistogram();
         } else if (window.currentPhase === 1) {
@@ -2289,6 +2292,8 @@ function showPsychometricHistogram() {
             <button onclick="showDynamicRiskCard()" class="custom-cta-button" style="max-width: 300px; width: 100%;">View Misalignment Risk →</button>
         </div>
     `;
+    container.style.display = "flex";
+    container.style.opacity = "1";
     container.classList.add("active");
     window.scrollTo(0,0);
 }

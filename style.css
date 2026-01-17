@@ -72,10 +72,20 @@ body {
 }
 
 /* UI FOR QUESTION PAGE */
-.question-page { position: relative; z-index: 9999; display: none; min-height: 100vh; background: #fff; padding: 0; flex-direction: column; }
+.question-page { position: relative; z-index: 9999; display: none; min-height: 100vh; background: #fff; padding: 0; flex-direction: column;
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 40px 20px; }
 .active { display: flex !important; visibility: visible !important; opacity: 1 !important; }
 
-.question-content-wrapper { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; width: 100%; }
+.question-content-wrapper { flex-grow: 1; display: flex; flex-direction: column;
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 40px 20px; align-items: center; justify-content: center; padding: 40px 20px; width: 100%; }
 
 .question-container { width: 100%; max-width: 750px; background: #fff; padding: 0 20px; }
 .progress-container { width: 100%; margin-bottom: 20px; text-align: center; }
@@ -83,17 +93,32 @@ body {
 .progress-fill { height: 100%; background: #FF6B35; border-radius: 10px; transition: width 0.4s ease; }
 .progress-label { font-size: 0.9rem; color: #64748B; font-weight: 500; }
 .question-text { font-size: 2rem; font-weight: 800; color: var(--navy-premium); margin-bottom: 30px; line-height: 1.3; text-align: left; }
-.options-grid { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+.options-grid { display: flex; flex-direction: column;
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 40px 20px; gap: 15px; width: 100%; }
 .option-card { padding: 20px 25px; background: #F8FAFC; border-radius: 12px; cursor: pointer; transition: all 0.2s ease; font-size: 1.1rem; font-weight: 500; color: var(--navy-premium); border: 2px solid transparent; text-align: left; }
 .option-card:hover { background: #F1F5F9; }
 .option-card.selected { border-color: var(--navy-premium); background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
 /* Other Pages */
-.details-page, .success-page, #paymentPageContainer { display: none; min-height: 100vh; background: var(--bg-light); padding: 0; flex-direction: column; }
+.details-page, .success-page, #paymentPageContainer { display: none; min-height: 100vh; background: var(--bg-light); padding: 0; flex-direction: column;
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 40px 20px; }
 .details-content-wrapper, .success-content-wrapper { 
     flex-grow: 1; 
     display: flex; 
-    flex-direction: column; 
+    flex-direction: column;
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 40px 20px; 
     align-items: center; 
     justify-content: center; 
     padding: 40px 20px; 
@@ -170,6 +195,11 @@ footer .policy-links a { margin: 0 8px; color: #CBD5E1; text-decoration: none; f
     min-height: 80vh;
     display: flex;
     flex-direction: column;
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 40px 20px;
     align-items: center;
     justify-content: center;
     color: white;
@@ -241,6 +271,11 @@ footer .policy-links a { margin: 0 8px; color: #CBD5E1; text-decoration: none; f
 .trust-badge-item {
     display: flex;
     flex-direction: column;
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 40px 20px;
     align-items: center;
     gap: 5px;
     font-size: 0.75rem;
@@ -443,3 +478,5 @@ footer .policy-links a { margin: 0 8px; color: #CBD5E1; text-decoration: none; f
 .cta-button-pulse {
     animation: cta-pulse 2s infinite;
 }
+.flow-container { max-width: 800px; margin: 0 auto; display: none; flex-direction: column; align-items: center; padding: 40px 20px; position: relative; z-index: 9999; }
+.flow-container.active { display: flex !important; visibility: visible !important; opacity: 1 !important; }

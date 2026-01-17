@@ -2263,6 +2263,7 @@ function showPsychometricHistogram() {
     
     const container = document.getElementById('psychometricHistogram');
     container.innerHTML = `
+        <div class="details-form" style="background: white; border-radius: 16px; padding: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-grey); width: 100%; display: flex; flex-direction: column; align-items: center;">
         <h2 class="text-3xl font-bold mb-4">DNA Snapshot: Analyzing Neural Patterns</h2>
         <p class="text-slate-600 mb-8">We are mapping your child's cognitive architecture based on Phase 0 inputs.</p>
         <div class="histogram-container">
@@ -2280,84 +2281,88 @@ function showPsychometricHistogram() {
             </div>
         </div>
         <button onclick="showDynamicRiskCard()" class="custom-cta-button" style="max-width: 300px;">View Misalignment Risk →</button>
-    `;
-    container.classList.add('active');
-    window.scrollTo(0,0);
-}
-
-function showDynamicRiskCard() {
-    const containers = document.querySelectorAll('.flow-container');
-    containers.forEach(c => c.classList.remove('active'));
-    
-    const q1Ans = answers['p0_q1'];
-    const personas = ["Visual Strategist", "Verbal Analyst", "Conceptual Learner"];
-    const selectedPersona = personas[q1Ans] || "Unique Learner";
-    
-    const container = document.getElementById('dynamicRiskCard');
-    container.innerHTML = `
-        <div class="risk-card-dynamic">
-            <div class="risk-icon-alert">⚠️</div>
-            <h2 class="text-2xl font-bold text-red-900 mb-2">Misalignment Alert</h2>
-            <p class="text-red-800 mb-6">Your child is a <strong>${selectedPersona}</strong>. There is a 65% risk that a standard curriculum will suppress their natural logic processing.</p>
-            <div style="background: white; padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 20px;">
-                <p class="text-sm font-bold text-slate-700 mb-2">Smart Parent Pro Dashboard Note:</p>
-                <p class="text-xs text-slate-500">Phase 1 will now calibrate your specific board preferences to mitigate this risk.</p>
-            </div>
-            <button onclick="startPhase1()" class="custom-cta-button" style="background: #0F172A;">Calibrate with Phase 1 →</button>
         </div>
     `;
     container.classList.add('active');
     window.scrollTo(0,0);
-}
+} 
 
+function showDynamicRiskCard() { 
+    const containers = document.querySelectorAll(".flow-container"); 
+    containers.forEach(c => c.classList.remove("active")); 
+ 
+    const q1Ans = answers["p0_q1"]; 
+    const personas = ["Visual Strategist", "Verbal Analyst", "Conceptual Learner"]; 
+    const selectedPersona = personas[q1Ans] || "Unique Learner"; 
+    const container = document.getElementById("dynamicRiskCard"); 
+    container.innerHTML = ` 
+        <div class="details-form" style="background: white; border-radius: 16px; padding: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-grey); width: 100%; display: flex; flex-direction: column; align-items: center;"> 
+        <div class="risk-card-dynamic" style="text-align: center; display: flex; flex-direction: column; align-items: center;"> 
+            <div class="risk-icon-alert" style="text-align: center; margin-bottom: 15px;">⚠️</div> 
+            <h2 class="text-2xl font-bold text-red-900 mb-2">Misalignment Alert</h2> 
+            <p class="text-red-800 mb-6">Your child is a <strong>${selectedPersona}</strong>. There is a 65% risk that a standard curriculum will suppress their natural logic processing.</p> 
+            <div style="background: white; padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 20px; width: 100%;"> 
+                <p class="text-sm font-bold text-slate-700 mb-2">Smart Parent Pro Dashboard Note:</p> 
+                <p class="text-xs text-slate-500">Phase 1 will now calibrate your specific board preferences to mitigate this risk.</p> 
+            </div> 
+            <button onclick="startPhase1()" class="custom-cta-button" style="background: #0F172A; max-width: 300px; width: 100%;">Calibrate with Phase 1 →</button> 
+        </div> 
+        </div> 
+    `; 
+    container.classList.add("active"); 
+    window.scrollTo(0,0); 
+}
 function startPhase1() {
     window.currentPhase = 1;
     initializeQuizShell(0, 1);
 }
 
-function showDnaFinalization() {
-    const detailsPage = document.getElementById('detailsPage');
-    if (detailsPage) detailsPage.classList.remove('active');
-    
-    const app = document.getElementById('questionPageApp');
-    if (app) app.classList.remove('active');
-
-    const container = document.getElementById('dnaFinalization');
-    if (container) {
-        container.innerHTML = `
-            <div class="dna-final-sequence">
-                <div class="gold-trust-icon">
-                    <svg width="50" height="50" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                </div>
-                <h2 class="text-4xl font-black text-brand-navy mb-4">DNA ALIGNMENT COMPLETE</h2>
-                <p class="text-xl text-slate-600 mb-12">Your profile is secured. Redirecting to final validation...</p>
-                <div class="spinner"></div>
-            </div>
-        `;
-        container.classList.add('active');
-    }
-    
-    window.scrollTo(0,0);
-    
-    setTimeout(() => {
-        if (container) container.classList.remove('active');
-        const pricing = document.getElementById('pricingModal');
-        if (pricing) {
-            pricing.classList.add('active');
-            pricing.scrollIntoView({ behavior: 'smooth' });
-            document.getElementById('mainFooter').classList.remove('hidden');
-            document.getElementById('contact-and-policies').classList.remove('hidden');
-        }
-    }, 3000);
-}
-
-// FINAL INITIALIZATION:
-document.addEventListener('DOMContentLoaded', () => {
-    checkPaymentStatus();
-    if (typeof calculateCostOfConfusion === 'function') {
-        calculateCostOfConfusion();
-    }
-});
-// Explicit Window Exports for Quiz and Sync Gate
-window.initializeQuizShell = initializeQuizShell;
+ 
+function showDnaFinalization() { 
+    const detailsPage = document.getElementById("detailsPage"); 
+    if (detailsPage) detailsPage.classList.remove("active"); 
+ 
+    const app = document.getElementById("questionPageApp"); 
+    if (app) app.classList.remove("active"); 
+ 
+    const container = document.getElementById("dnaFinalization"); 
+    if (container) { 
+        container.innerHTML = ` 
+        <div class="details-form" style="background: white; border-radius: 16px; padding: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-grey); width: 100%; display: flex; flex-direction: column; align-items: center;"> 
+            <div class="dna-final-sequence" style="text-align: center;"> 
+                <div class="gold-trust-icon" style="margin-bottom: 20px;"> 
+                    <svg width="50" height="50" viewBox="0 0 24 24" fill="#F59E0B"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> 
+                </div> 
+                <h2 class="text-4xl font-black text-brand-navy mb-4">DNA ALIGNMENT COMPLETE</h2> 
+                <p class="text-xl text-slate-600 mb-12">Your profile is secured. Redirecting to final validation...</p> 
+                <div class="spinner"></div> 
+            </div> 
+        </div> 
+        `; 
+        container.classList.add("active"); 
+    } 
+ 
+    window.scrollTo(0,0); 
+ 
+    setTimeout(() => { 
+        if (container) container.classList.remove("active"); 
+        const pricing = document.getElementById("pricingModal"); 
+        if (pricing) { 
+            pricing.classList.add("active"); 
+            pricing.scrollIntoView({ behavior: "smooth" }); 
+            document.getElementById("mainFooter").classList.remove("hidden"); 
+            document.getElementById("contact-and-policies").classList.remove("hidden"); 
+        } 
+    }, 3000); 
+} 
+ 
+// FINAL INITIALIZATION: 
+document.addEventListener("DOMContentLoaded", () => { 
+    checkPaymentStatus(); 
+    if (typeof calculateCostOfConfusion === "function") { 
+        calculateCostOfConfusion(); 
+    } 
+}); 
+// Explicit Window Exports for Quiz and Sync Gate 
+window.initializeQuizShell = initializeQuizShell; 
 window.startSyncMatchNow = startSyncMatchNow;

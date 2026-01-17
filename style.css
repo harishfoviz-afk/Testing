@@ -480,4 +480,4 @@ footer .policy-links a { margin: 0 8px; color: #CBD5E1; text-decoration: none; f
 }
 .flow-container { max-width: 800px; margin: 0 auto; display: none; flex-direction: column; align-items: center; padding: 40px 20px; position: relative; z-index: 9999; }
 .flow-container.active { display: flex !important; visibility: visible !important; opacity: 1 !important; }
-.histo-fill { height: 100%; background: var(--sunrise-primary); transition: width 2s ease-out; }
+.histo-fill { display: block !important; width: var(--histo-width); height: 100%; background: var(--sunrise-primary); transition: width 2s ease-out; }

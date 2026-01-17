@@ -2261,6 +2261,9 @@ window.recoverSessionEmail = recoverSessionEmail;
 
 window.openCollaborationModal = openCollaborationModal;
 function showPsychometricHistogram() {
+    document.getElementById("react-hero-root").style.display = "none";
+    document.getElementById("landingPage").style.display = "none";
+    window.scrollTo({ top: 0, behavior: "instant" });
     const app = document.getElementById("questionPageApp");
     if (app) app.classList.remove("active");
 
@@ -2272,15 +2275,15 @@ function showPsychometricHistogram() {
             <div class="histogram-container" style="width: 100%; max-width: 500px; margin-bottom: 30px;">
                 <div class="histo-bar-wrapper" style="margin-bottom: 20px;">
                     <div class="histo-label" style="display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600;"><span>Visual Processing</span><span>82%</span></div>
-                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="width: 82%;"></div></div>
+                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="--histo-width: 82%;"></div></div>
                 </div>
                 <div class="histo-bar-wrapper" style="margin-bottom: 20px;">
                     <div class="histo-label" style="display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600;"><span>Auditory Synthesis</span><span>45%</span></div>
-                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="width: 45%; background: #3B82F6;"></div></div>
+                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="--histo-width: 45%; background: #3B82F6;"></div></div>
                 </div>
                 <div class="histo-bar-wrapper">
                     <div class="histo-label" style="display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600;"><span>Kinesthetic Logic</span><span>91%</span></div>
-                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="width: 91%; background: #10B981;"></div></div>
+                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="--histo-width: 91%; background: #10B981;"></div></div>
                 </div>
             </div>
             <button onclick="showDynamicRiskCard()" class="custom-cta-button" style="max-width: 300px; width: 100%;">View Misalignment Risk →</button>
@@ -2314,6 +2317,11 @@ function showDynamicRiskCard() {
     `;
     container.classList.add("active");
     window.scrollTo(0,0);
+ 
+function startPhase1() { 
+    window.currentPhase = 1; 
+    initializeQuizShell(0, 1); 
+}
 }
  
 function showDnaFinalization() { 

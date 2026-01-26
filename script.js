@@ -4,7 +4,8 @@ if (location.hostname !== 'localhost' && location.hostname === 'www.aptskola.com
 }
 
 // --- FORCE HTTPS (Add to top of script.js) ---
-if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+// --- FORCE HTTPS (Add to top of script.js) ---
+if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.protocol !== 'file:') {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
 }
 
@@ -22,17 +23,14 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const PACKAGE_PRICES = { 'Essential': 59900, 'Premium': 99900, 'The Smart Parent Pro': 149900 };
 
 // External Payment Links (Replace these with your actual Razorpay Payment Links)
-const PAYMENT_LINKS = {
-    599: "https://rzp.io/rzp/fQ0kiUb",
-    999: "https://rzp.io/rzp/JSA3F7g",
-    1499: "https://rzp.io/rzp/1L9W83a",
-    299: "https://rzp.io/rzp/Jq71ACDV"
-};
+// External Payment Links (Managed via Razorpay API)
+// const PAYMENT_LINKS = { ... }; // REMOVED: Unused
+
 window.currentPhase = 0; // 0: Phase0, 1: Phase1, 2: Sync
 
 
 // --- INITIALIZATION ---
-(function() {
+(function () {
     if (typeof emailjs !== 'undefined') {
         emailjs.init({
             publicKey: EMAILJS_PUBLIC_KEY, // Pass as an object property
@@ -40,7 +38,9 @@ window.currentPhase = 0; // 0: Phase0, 1: Phase1, 2: Sync
     }
 })();
 
+
 // --- STATE MANAGEMENT ---
+window.initializeQuizShell = initializeQuizShell; // Expose to window immediately (Diagnostic Move)
 let currentQuestion = 0;
 let selectedPackage = 'Essential';
 let selectedPrice = 599;
@@ -60,6 +60,124 @@ let syncTimerInterval = null;
 let mapsScriptLoaded = false;
 let mapsLoadedPromise = null;
 
+
+
+function calculateAgeFromDob(dobString) {
+    if (!dobString) return "N/A";
+    const dob = new Date(dobString);
+    const diff_ms = Date.now() - dob.getTime();
+    const age_dt = new Date(diff_ms);
+    const age = Math.abs(age_dt.getUTCFullYear() - 1970);
+    return age + " Years";
+}
+
+function validateGrade1Eligibility(birthDateString) {
+    if (!birthDateString) return;
+
+    const birthDate = new Date(birthDateString);
+    const cutoffDate = new Date('2026-03-31');
+
+    // Calculate age on cutoff date
+    let age = cutoffDate.getFullYear() - birthDate.getFullYear();
+    const m = cutoffDate.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && cutoffDate.getDate() < birthDate.getDate())) {
+        age--;
+    }
+
+    if (age < 6) {
+        alert("Summer-Born Alert: Your child is below 6 years. We will include a Bridge Year Recommendation in your roadmap.");
+    }
+}
+
+// --- MISSING QUIZ SHELL INITIALIZER ---
+
+// --- COST CALCULATOR HANDLER ---
+// --- COST CALCULATOR HANDLER ---
+window.handleCostCalculatorClick = function () {
+    const section = document.getElementById('cost-calculator-section');
+    const footer = document.getElementById('mainFooter');
+
+    if (section) {
+        section.classList.remove('hidden'); // Reveal Calculator
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    if (footer) {
+        footer.classList.remove('hidden'); // Reveal Footer
+        footer.classList.add('visible-footer'); // Optional: For any custom styling
+    }
+};
+
+window.revealPolicies = function (id) {
+    const policySection = document.getElementById('contact-policies');
+    if (policySection) {
+        policySection.classList.remove('hidden');
+        const target = document.getElementById(id);
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            policySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+};
+
+// --- CALCULATOR UI LOGIC (REDESIGNED) ---
+window.calculateNewConfusion = function () {
+    const slider = document.getElementById('tuitionSlider');
+    if (!slider) return;
+
+    const baseFee = parseInt(slider.value) || 150000;
+
+    // Update Slider Display
+    const feeDisplay = document.getElementById('feeDisplay');
+    if (feeDisplay) feeDisplay.textContent = baseFee.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+    // 1. Calculate 15-Year Projected Spend (10% Annual Hike)
+    // Formula: Sum of Geometric Series: a * (1 - r^n) / (1 - r)
+    // a = baseFee, r = 1.10, n = 15
+    const r = 1.10;
+    const n = 15;
+    const totalProjected = baseFee * ((Math.pow(r, n) - 1) / (r - 1));
+
+    const projEl = document.getElementById('projectedTotal');
+    if (projEl) projEl.textContent = totalProjected.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+    // 2. Calculate "Cost of Confusion" (The Leak)
+    // Leak = (35% of Year 1 Hidden Fees) + (1.5 Lakh Switch) + (50k Remedial)
+    const hiddenFees = baseFee * 0.35;
+    const switchPenalty = 150000;
+    const remedialFix = 50000;
+    const totalLeak = hiddenFees + switchPenalty + remedialFix;
+
+    const leakEl = document.getElementById('leakAmount');
+    if (leakEl) leakEl.textContent = totalLeak.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+    const hiddenEl = document.getElementById('breakdownHidden');
+    if (hiddenEl) hiddenEl.textContent = hiddenFees.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+};
+
+// Initialize Calculator on Load
+window.addEventListener('load', () => {
+    if (typeof window.calculateNewConfusion === 'function') {
+        window.calculateNewConfusion();
+    }
+});
+
+
+// --- COST CALCULATOR REFACTOR ---
+function RealCostOfSchooling(tuitionFee) {
+    const HIDDEN_FEE_MARKUP = 0.35; // 35% Hidden Fee Markup
+    const hiddenGap = tuitionFee * HIDDEN_FEE_MARKUP;
+    const totalCost = tuitionFee + hiddenGap;
+    return {
+        tuition: tuitionFee,
+        hidden: hiddenGap,
+        total: totalCost
+    };
+}
+// Legacy wrapper
+const calculateCostOfConfusion = RealCostOfSchooling;
+
 // --- UI COMPONENTS (HTML Strings) ---
 const xrayCardHtml = `
     <div class="xray-card">
@@ -71,15 +189,20 @@ const xrayCardHtml = `
 `;
 
 const fovizBannerHtml = `
-    <div class="foviz-banner">
-        <h3><a href="https://foviz.in" target="_blank" style="color: inherit; text-decoration: none; hover: underline;">Plan the "Next Phase" with 5D Analysis</a></h3>
-        <p>Your board choice is Step 1. Foviz Career GPS maps your path to 2040.</p>
+    <div class="foviz-banner" style="margin-top: 30px; padding: 15px; background: #F0FDFA; border: 1px solid #CCFBF1; border-radius: 8px; text-align: center;">
+        <h3 style="margin: 0; font-size: 1rem;"><a href="https://foviz.in" target="_blank" style="color: #0D9488; text-decoration: none; font-weight: 700;">Plan the "Next Phase" with 5D Analysis →</a></h3>
     </div>
 `;
 
 const ambassadorButtonHtml = `
     <button onclick="openCollaborationModal('Ambassador')" class="btn-ambassador">
-        <span>✨</span> Thank you and Be our Ambassadors and earn cash rewards from 300 to 3000 <span>🤝</span><span>✨</span>
+        <span>✨</span> Thank you and Be our Ambassadors and earn cash rewards from 300 to 3000 🤝✨
+    </button>
+`;
+
+const educatorPartnerHtml = `
+    <button onclick="openCollaborationModal('Partner')" class="btn-partner" style="margin-top:10px;">
+        🤝 Educator Partnership - Join our AI Forensic Network 🏫
     </button>
 `;
 
@@ -103,7 +226,7 @@ const manualSyncUI = `
 `;
 
 // --- DATA MASTERS ---
-const MASTER_DATA = { 
+const MASTER_DATA = {
     cbse: {
         name: "CBSE",
         title: "The Standardized Strategist",
@@ -139,14 +262,14 @@ const MASTER_DATA = {
     },
     'Cambridge (IGCSE)': {
         name: "Cambridge (IGCSE)",
-        title: "The International Achiever",
-        persona: "Flexible Specialist",
-        profile: "This profile values subject depth and assessment flexibility, allowing students to tailor their studies for international university application.",
-        rejectionReason: "Why not CBSE? Requires much higher English proficiency and is not directly aligned with Indian competitive exams.",
-        careerPath: "International University Admissions and Specialized Career Paths (Finance, Design).",
-        philosophy: 'Subject depth and international curriculum portability.',
-        teachingMethod: 'Application-based learning. Requires external resources and focuses on critical thinking over rote memorization.',
-        parentalRole: 'Moderate to High. You must manage complex curriculum choices and ensure external support for topics like Math/Science.'
+        title: "The Analytical Globalist",
+        persona: "Logic Seeker",
+        profile: "This profile excels at logical reasoning (Math/Science) but within a structured framework. They prefer depth over breadth.",
+        rejectionReason: "Why not IB? While similar, Cambridge offers more structure. The extreme openness of IB regarding content choice might feel 'loose' to them.",
+        careerPath: "STEM Global Track (Engineering/Medicine abroad). Grade 9-10 (IGCSE): Strong Math/Science foundation. Grade 11-12 (A-Levels): Deep specialization.",
+        philosophy: 'Deep Subject Mastery and Analytical Skills.',
+        teachingMethod: 'Structured curriculum with a focus on problem-solving rather than just facts.',
+        parentalRole: 'Moderate-High. You need to ensure they are keeping up with the rigorous global standards.'
     },
     'State Board': {
         name: "State Board",
@@ -206,7 +329,7 @@ const MASTER_DATA = {
         ]
     },
     interviewMastery: {
-        part1: [ 
+        part1: [
             { q: "What is your name?", strategy: "Confidence. Eye contact is the gold standard." },
             { q: "Who did you come with?", strategy: "Recognize family. 'Mommy and Daddy' is perfect." },
             { q: "Favorite color/toy?", strategy: "Enthusiasm. Watch them light up." },
@@ -223,7 +346,7 @@ const MASTER_DATA = {
             { q: "Identify this shape.", strategy: "Academic baseline." },
             { q: "Tell a story about this picture.", strategy: "Imagination vs Listing items." }
         ],
-        part2: [ 
+        part2: [
             { q: "Why this school?", strategy: "Align values, don't just say 'It's close'." },
             { q: "Describe child in 3 words.", strategy: "Be real. 'Energetic' > 'Perfect'." },
             { q: "Nuclear or Joint family?", strategy: "Context check for support system." },
@@ -240,14 +363,14 @@ const MASTER_DATA = {
             { q: "Weekends?", strategy: "Engagement/Stability check." },
             { q: "Toilet trained?", strategy: "Honesty regarding hygiene." }
         ],
-        part3: [ 
+        part3: [
             { q: "Child complains about teacher?", strategy: "Listen, but verify context first." },
             { q: "Definition of Success?", strategy: "Happiness & problem solving." },
             { q: "Writing at age 5?", strategy: "Trust the motor skill process." },
             { q: "Child is too quiet?", strategy: "He is an observer, will warm up." },
             { q: "Parenting style?", strategy: "Authoritative (Boundaries + Warmth)." }
         ],
-        scoop: [ 
+        scoop: [
             { title: "Red Flag", text: "Answering FOR the child loses 10 points instantly." },
             { title: "Red Flag", text: "Bribing with chocolate in the waiting room." },
             { title: "Pro Tip", text: "If child freezes, say: 'He is overwhelmed, usually chatty.' Then let it go." }
@@ -278,8 +401,10 @@ const phase1Questions = [
     { id: "q12", text: "What grade is your child entering?", options: ["Preschool / Kindergarten", "Primary (Grades 1-5)", "Middle (Grades 6-8)", "High School (Grades 9+)"] },
     { id: "q13", text: "What class size do you prefer?", options: ["Small (Less than 25 kids)", "Standard (25-40 kids)", "Large (40+ kids)"] },
     { id: "q14", text: "How involved do you want to be in homework?", options: ["High (I will help daily)", "Moderate (Weekly check-ins)", "Low (School should manage it)"] },
-    { id: "q15", text: "Where are you looking for schools?", options: ["Metro City (Delhi, Mumbai, Hyd, etc.)", "Tier-2 City (Jaipur, Vizag, etc.)", "Small Town / Rural Area"] },
+    { id: "q15", text: "Where are you looking for schools?", options: ["Metro City (Delhi, Mumbai, Hyd, etc.)", "Tier-2 City (Jaipur, Vizag, etc.)", "Small Town / Rural Area"] }
+];
 
+const phase2Questions = [
     {
         id: "q16",
         isObservation: true,
@@ -487,7 +612,7 @@ const phase1Questions = [
         },
         options_variants: {
             "5-10": ["Tell me every step", "Make my own games", "A mix of both", "I don't know"],
-            "10-15": ["Give me the answers", "Help me find them", "Either is fine", "I don mind"],
+            "10-15": ["Give me the answers", "Help me find them", "Either is fine", "I don't mind"],
             "15+": ["Guarantees a Rank", "Builds a Global Profile", "Needs both", "Not sure"]
         }
     }
@@ -500,7 +625,7 @@ function checkPaymentStatus() {
 
     if (razorpayId) {
         console.log("Payment detected. Transitioning to report...");
-        
+
         const landing = document.getElementById('landingPage');
         if (landing) landing.style.display = 'none';
 
@@ -516,15 +641,15 @@ function checkPaymentStatus() {
             customerData = data.customerData;
             selectedPackage = data.selectedPackage;
             selectedPrice = data.selectedPrice;
-            
+
             renderReportToBrowser().then(() => {
                 showInstantSuccessPage();
-                if(overlay) overlay.style.display = 'none';
+                if (overlay) overlay.style.display = 'none';
                 triggerAutomatedEmail();
             });
         } else {
-            if(overlay) overlay.style.display = 'none';
-            if(landing) landing.style.display = 'block';
+            if (overlay) overlay.style.display = 'none';
+            if (landing) landing.style.display = 'block';
             alert("Payment successful! However, your session data was lost. Please ensure you are not switching between 'www' and 'non-www' domains.");
         }
     }
@@ -534,59 +659,27 @@ function checkPaymentStatus() {
 function validateInputs(email, phone) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const mobileRegex = /^[6-9]\d{9}$/;
-    
+
     let isValid = true;
     const emailEl = document.getElementById('email');
     const phoneEl = document.getElementById('phone');
 
-    if(emailEl) emailEl.classList.remove('input-error');
-    if(phoneEl) phoneEl.classList.remove('input-error');
+    if (emailEl) emailEl.classList.remove('input-error');
+    if (phoneEl) phoneEl.classList.remove('input-error');
 
     if (!emailRegex.test(email)) {
-        if(emailEl) emailEl.classList.add('input-error');
+        if (emailEl) emailEl.classList.add('input-error');
         isValid = false;
     }
     if (!mobileRegex.test(phone)) {
-        if(phoneEl) phoneEl.classList.add('input-error');
+        if (phoneEl) phoneEl.classList.add('input-error');
         isValid = false;
     }
     return isValid;
 }
 
 // --- UPDATED: CALCULATOR LOGIC WITH DONUT CHART ---
-function calculateCostOfConfusion() {
-    const hoursInput = document.getElementById('researchHours');
-    const rateInput = document.getElementById('hourlyRate');
-    const tabsInput = document.getElementById('browserTabs');
-    if (!hoursInput || !rateInput || !tabsInput) return;
-
-    const hours = parseInt(hoursInput.value);
-    const rate = parseInt(rateInput.value);
-    const tabs = parseInt(tabsInput.value);
-    
-    const monthlyLoss = (hours * 4) * rate; 
-    const anxietyLevel = Math.min(tabs * 5, 100); 
-
-    const lossEl = document.getElementById('lossAmount');
-    if(lossEl) lossEl.textContent = monthlyLoss.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
-    
-    const anxEl = document.getElementById('anxietyLevel');
-    if(anxEl) anxEl.textContent = `${anxietyLevel}%`;
-
-    const hVal = document.getElementById('hoursValue');
-    if(hVal) hVal.textContent = `${hours} hours`;
-    
-    const rVal = document.getElementById('rateValue');
-    if(rVal) rVal.textContent = `₹${rate.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-    
-    const tVal = document.getElementById('tabsValue');
-    if(tVal) tVal.textContent = `${tabs} tabs`;
-
-    const donut = document.getElementById('confusionDonut');
-    if(donut) {
-        donut.style.setProperty('--anxiety-degree', `${anxietyLevel}%`);
-    }
-}
+// [Deleted legacy calculateCostOfConfusion to fix syntax error]
 
 // --- CORE UI ACTIONS ---
 function scrollToClarity() {
@@ -675,118 +768,56 @@ function openCollaborationModal(type) {
 }
 
 function goToLandingPage() {
-    document.getElementById("react-hero-root").style.display = "block";
-    document.getElementById("landingContentWrapper").style.display = "block";
-    document.getElementById("mainFooter").style.display = "block";
-    const heroRoot = document.getElementById('react-hero-root');
-    if (heroRoot) heroRoot.style.display = 'block';
-    const landingPage = document.getElementById('landingPage');
-    if (landingPage) landingPage.style.display = 'block';
+    console.log("Returning to Landing Page...");
     currentQuestion = 0;
     answers = {};
     const form = document.getElementById('customerForm');
-    if(form) form.reset();
-    
-    // Show landing elements
-    document.getElementById('landingPage').classList.remove('hidden');
-    document.getElementById('pricingModal').classList.remove('active');
-    document.getElementById('testimonials').classList.remove('hidden');
-    document.getElementById('educatorPartner').classList.remove('hidden');
-    document.getElementById('contact-and-policies').classList.remove('hidden');
-    document.getElementById('mainFooter').classList.remove('hidden');
-    
-    // Hide app pages
-    const dPage = document.getElementById('detailsPage');
-    if(dPage) dPage.classList.remove('active');
-    const pCont = document.getElementById('paymentPageContainer');
-    if(pCont) pCont.classList.remove('active');
-    const sPage = document.getElementById('successPage');
-    if(sPage) sPage.classList.remove('active');
-    const sGate = document.getElementById('syncMatchGate');
-    if(sGate) sGate.classList.remove('active');
-    const sTrans = document.getElementById('syncMatchTransition');
-    if(sTrans) sTrans.classList.remove('active');
-    
-    const app = document.getElementById('questionPageApp');
-    if (app) app.classList.remove('active');
+    if (form) form.reset();
+
+    // 1. Show Landing and Hero
+    const landing = document.getElementById('landingPage');
+    if (landing) {
+        landing.classList.remove('hidden');
+        landing.classList.add('active');
+        landing.style.setProperty('display', 'block', 'important');
+    }
+
+    const hero = document.getElementById('react-hero-root');
+    if (hero) {
+        hero.classList.remove('hidden');
+        hero.style.setProperty('display', 'block', 'important');
+    }
+
+    // 2. Hide Assessments
+    const idsToHide = ['questionPages', 'syncMatchGate', 'syncMatchTransition', 'detailsPage', 'paymentPageContainer', 'psychometricHistogram', 'dynamicRiskCard', 'pricingModal'];
+    idsToHide.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('active');
+            el.classList.add('hidden');
+            el.style.display = ''; // Clear inline style
+        }
+    });
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function getIntermediateHeaderHtml() {
-     return `<div class="intermediate-header" onclick="goToLandingPage()" style="cursor:pointer;"><div class="max-w-7xl mx-auto"><span class="font-bold text-xl">Apt <span class="text-brand-orange">Skola</span></span></div></div>`;
+    return `
+    <div class="intermediate-header">
+        <div class="max-w-7xl mx-auto flex items-center justify-start">
+            <a href="javascript:void(0)" onclick="goToLandingPage()" class="logo-link cursor-pointer" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 4px;">
+                <span class="font-bold text-xl text-white">Apt <span class="text-brand-orange">Skola</span></span>
+            </a>
+        </div>
+    </div>`;
 }
 function getIntermediateFooterHtml() {
-     return `<div class="intermediate-footer"><div class="max-w-7xl mx-auto text-center"><p>&copy; 2026 Apt Skola, all rights reserved.</p></div></div>`;
+    return `<div class="intermediate-footer"><div class="max-w-7xl mx-auto text-center"><p class="text-xs font-medium opacity-70" style="font-size: 0.8rem !important;">&copy; 2024 - 2026 Apt Skola, all rights reserved.</p></div></div>`;
 }
 
-// --- SYNC MATCH GATE LOGIC ---
-function openSyncMatchGate() {
-    const landing = document.getElementById('landingPage');
-    const gate = document.getElementById('syncMatchGate');
-    
-    if (landing && gate) {
-        // Hide landing elements
-        landing.classList.remove('active');
-        document.getElementById('pricingModal').classList.remove('active');
-        document.getElementById('testimonials').classList.remove('active');
-        document.getElementById('educatorPartner').classList.remove('active');
-        document.getElementById('contact-and-policies').classList.remove('active');
-        document.getElementById('mainFooter').classList.remove('active');
-        
-        gate.classList.remove('hidden');
-        gate.classList.add('active'); 
-        
-        // --- CTO FIX: Injecting the missing ads into the gate ---
-        const gateContent = gate.querySelector('.details-form');
-        if (gateContent && !gateContent.querySelector('.xray-card')) {
-            const backLink = gateContent.querySelector('p[onclick*="goToLandingPage"]');
-            if (backLink) {
-                backLink.insertAdjacentHTML('beforebegin', xrayCardHtml);
-                backLink.insertAdjacentHTML('beforebegin', fovizBannerHtml);
-            }
-        }
-        window.scrollTo(0, 0);
-    }
-}
+// --- SYNC MATCH GATE LOGIC MOVED DOWN ---
 
-function validateAndStartSyncMatch() {
-    const startBtn = document.getElementById('startSyncBtn');
-    const orderIdInput = document.getElementById('syncOrderId');
-    const ageInput = document.getElementById('syncChildAge');
-      // Define here for global scope within function
-    const orderId = orderIdInput ? orderIdInput.value.trim() : '';
-
-    if(!orderId || orderId.length < 3) {
-        alert("Please enter a valid Order ID.");
-        return;
-    }
-
-    customerData.orderId = orderId; 
-
-    // Handle session not found (Manual Recovery)
-    const savedSession = localStorage.getItem(`aptskola_session_${orderId}`);
-    if (!savedSession) {
-        if (startBtn && !document.getElementById('manualSyncBlock')) {
-            startBtn.insertAdjacentHTML('beforebegin', manualSyncUI);
-            startBtn.classList.add('hidden'); // Hide the button immediately
-            
-            // Ensure the newly injected block is visible
-            const manualBlock = document.getElementById('manualSyncBlock');
-            if(manualBlock) manualBlock.style.display = 'block';
-        }
-        return;
-    }
-
-    // Handle session found
-    const sessionData = JSON.parse(savedSession);
-    answers = sessionData.answers;
-    customerData = sessionData.customerData;
-    if(ageInput) customerData.childAge = ageInput.value;
-
-    // Proceed to transition
-    document.getElementById('syncMatchGate').classList.remove('active');
-    showSyncTransition();
-}
 
 function injectVisionMarkers(boardName) {
     if (boardName === 'CBSE') {
@@ -801,7 +832,7 @@ function injectVisionMarkers(boardName) {
 
     for (let i = 4; i <= 15; i++) {
         if (answers['q' + i] === undefined) {
-            answers['q' + i] = 0; 
+            answers['q' + i] = 0;
         }
     }
 }
@@ -812,15 +843,15 @@ function confirmManualSync() {
     const boardSelect = document.getElementById('manualBoardSelect');
     const orderIdInput = document.getElementById('syncOrderId');
     const ageInput = document.getElementById('syncChildAge');
-    
+
     if (!boardSelect || !boardSelect.value) {
         alert("Please select the Recommended Board from your report.");
         return;
     }
-    
+
     injectVisionMarkers(boardSelect.value);
-    if(orderIdInput) customerData.orderId = orderIdInput.value;
-    if(ageInput) customerData.childAge = ageInput.value;
+    if (orderIdInput) customerData.orderId = orderIdInput.value;
+    if (ageInput) customerData.childAge = ageInput.value;
     isManualSync = true;
     isSyncMatchMode = true;
 
@@ -834,10 +865,10 @@ function showSyncTransition() {
         startSyncMatchNow();
         return;
     }
-    
+
     transition.classList.remove('hidden');
     transition.classList.add('active');
-    
+
     const transitionContainer = transition.querySelector('.details-form');
     if (transitionContainer && !transitionContainer.querySelector('.xray-card')) {
         // Find the timer circle to place the ads below it
@@ -846,14 +877,14 @@ function showSyncTransition() {
             timerCont.insertAdjacentHTML('afterend', xrayCardHtml + fovizBannerHtml);
         }
     }
-    
+
     let timeLeft = 15;
     const timerDisplay = document.getElementById('syncTimer');
-    
+
     if (syncTimerInterval) clearInterval(syncTimerInterval);
     syncTimerInterval = setInterval(() => {
         timeLeft--;
-        if(timerDisplay) timerDisplay.textContent = timeLeft;
+        if (timerDisplay) timerDisplay.textContent = timeLeft;
         if (timeLeft <= 0) {
             startSyncMatchNow();
         }
@@ -867,7 +898,7 @@ function startSyncMatchNow() {
         transition.classList.remove('active');
         transition.classList.remove('active');
     }
-    initializeQuizShell(15, 2); 
+    initializeQuizShell(0, 2);
 }
 
 // --- SCORING LOGIC ---
@@ -875,14 +906,14 @@ function calculateFullRecommendation(ansSet) {
     let scores = { "CBSE": 0, "ICSE": 0, "IB": 0, "Cambridge (IGCSE)": 0, "State Board": 0 };
     let veto = { ib: false, cambridge: false, icse: false };
 
-    if (ansSet.q1 === 0) { scores["IB"] += 6; scores["Cambridge (IGCSE)"] += 6; scores["ICSE"] += 4; } 
-    if (ansSet.q1 === 1) { scores["CBSE"] += 6; scores["State Board"] += 5; scores["ICSE"] += 4; } 
-    if (ansSet.q1 === 2) { scores["IB"] += 8; scores["Cambridge (IGCSE)"] += 8; } 
-    if (ansSet.q1 === 3) { scores["CBSE"] += 4; scores["ICSE"] += 4; } 
+    if (ansSet.q1 === 0) { scores["IB"] += 6; scores["Cambridge (IGCSE)"] += 6; scores["ICSE"] += 4; }
+    if (ansSet.q1 === 1) { scores["CBSE"] += 6; scores["State Board"] += 5; scores["ICSE"] += 4; }
+    if (ansSet.q1 === 2) { scores["IB"] += 8; scores["Cambridge (IGCSE)"] += 8; }
+    if (ansSet.q1 === 3) { scores["CBSE"] += 4; scores["ICSE"] += 4; }
 
-    if (ansSet.q2 === 0) { scores["CBSE"] += 7; scores["State Board"] += 5; } 
-    if (ansSet.q2 === 1) { scores["ICSE"] += 7; scores["IB"] += 6; } 
-    if (ansSet.q2 === 2) { scores["IB"] += 7; scores["Cambridge (IGCSE)"] += 7; } 
+    if (ansSet.q2 === 0) { scores["CBSE"] += 7; scores["State Board"] += 5; }
+    if (ansSet.q2 === 1) { scores["ICSE"] += 7; scores["IB"] += 6; }
+    if (ansSet.q2 === 2) { scores["IB"] += 7; scores["Cambridge (IGCSE)"] += 7; }
 
     if (ansSet.q3 === 0) { scores["CBSE"] += 20; scores["State Board"] += 15; scores["IB"] -= 10; }
     if (ansSet.q3 === 1) { scores["IB"] += 20; scores["Cambridge (IGCSE)"] += 20; scores["CBSE"] -= 5; }
@@ -890,15 +921,15 @@ function calculateFullRecommendation(ansSet) {
 
     if (ansSet.q4 === 0) { veto.ib = true; veto.cambridge = true; scores["State Board"] += 10; scores["CBSE"] += 5; }
     if (ansSet.q4 === 1) { veto.ib = true; scores["CBSE"] += 8; scores["ICSE"] += 8; }
-    
-    let results = Object.keys(scores).map(board => { 
+
+    let results = Object.keys(scores).map(board => {
         let s = scores[board];
         if (veto.ib && (board === "IB" || board === "Cambridge (IGCSE)")) s = -999;
-        return { name: board, score: s }; 
+        return { name: board, score: s };
     });
 
     results.sort((a, b) => b.score - a.score);
-    
+
     let topScore = Math.max(results[0].score, 1);
     results.forEach(r => {
         r.percentage = r.score < 0 ? 0 : Math.min(Math.round((r.score / topScore) * 95), 99);
@@ -909,10 +940,8 @@ function calculateFullRecommendation(ansSet) {
 
 // --- FIXED SELECT PACKAGE LOGIC ---
 function selectPackage(pkg, price) {
-    if (window.currentPhase < 1 && !isSyncMatchMode) {
-        alert("Please complete the 4 quick DNA questions first.");
-        const target = document.getElementById("react-hero-root");
-        if (target) target.scrollIntoView({ behavior: "smooth" });
+    if (window.currentPhase !== 1 && window.currentPhase !== 2 && !isSyncMatchMode) {
+        alert("Please finish the assessment first.");
         return;
     }
     if (window.event) window.event.stopPropagation();
@@ -964,6 +993,43 @@ function confirmPremium() {
 }
 
 function proceedToQuiz(pkg, price) {
+    // --- REFACTOR: POST-QUIZ STATE DETECTION ---
+    // If we have parent data and completed answers, skip reset and go to payment
+    if (customerData && customerData.parentName && Object.keys(answers).length >= 10) {
+        console.log("Post-quiz state detected via proceedToQuiz. Transitioning to Payment.");
+        selectedPackage = pkg;
+        selectedPrice = price;
+
+        // Ensure modals/landing are closed
+        document.getElementById('landingPage').classList.remove('active');
+        const priModal = document.getElementById('pricingModal');
+        if (priModal) priModal.classList.remove('active');
+        const downModal = document.getElementById('downgradeModal');
+        if (downModal) downModal.classList.remove('active');
+        const proModal = document.getElementById('proUpgradeModal');
+        if (proModal) proModal.classList.remove('active');
+
+        // Show Payment Page
+        const pCont = document.getElementById('paymentPageContainer');
+        if (pCont) {
+            pCont.classList.remove('hidden');
+            pCont.classList.add('active');
+
+            const pNameEl = document.getElementById('summaryPackage');
+            const pPriceEl = document.getElementById('summaryPrice');
+            const pTotalEl = document.getElementById('summaryTotal');
+            const payBtn = document.getElementById('payButton');
+
+            if (pNameEl) pNameEl.textContent = selectedPackage;
+            if (pPriceEl) pPriceEl.textContent = `₹${selectedPrice}`;
+            if (pTotalEl) pTotalEl.textContent = `₹${selectedPrice}`;
+            if (payBtn) payBtn.innerText = `Pay ₹${selectedPrice} via Razorpay Link →`;
+        }
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        return;
+    }
+    // -------------------------------------------
+
     const previousFlag = hasSeenDowngradeModal;
     currentQuestion = 0;
     answers = {};
@@ -971,8 +1037,10 @@ function proceedToQuiz(pkg, price) {
     hasSeenDowngradeModal = previousFlag;
     selectedPackage = pkg;
     selectedPrice = price;
-    isSyncMatchMode = false; 
-    
+    isSyncMatchMode = false;
+    hasSeenMilestone1 = false;
+    hasSeenMilestone2 = false;
+
     // Hide landing elements
     document.getElementById('landingPage').classList.remove('active');
     document.getElementById('pricingModal').classList.remove('active');
@@ -980,46 +1048,60 @@ function proceedToQuiz(pkg, price) {
     document.getElementById('educatorPartner').classList.remove('active');
     document.getElementById('contact-and-policies').classList.remove('active');
     document.getElementById('mainFooter').classList.remove('active');
-    
+
     initializeQuizShell(0);
     window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 
 
+
+
+// Helper to generate Quiz Header
+function getIntermediateHeaderHtml() {
+    return `
+        <div style="text-align: center; padding-top: 20px; padding-bottom: 5px;">
+            <p style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase;">
+                Apt Skola <span style="color: #FF6B35;">//</span> Calibration
+            </p>
+        </div>
+    `;
+}
+
+// Helper to generate Quiz Footer (Reduced Height)
+function getIntermediateFooterHtml() {
+    return `
+        <div style="text-align: center; padding-top: 10px; padding-bottom: 20px;">
+            <p style="font-size: 0.7rem; color: #CBD5E1;">
+                Input is confidential & analyzed by AI.
+            </p>
+        </div>
+    `;
+}
+
 function initializeQuizShell(index, phase = 0) {
-    document.getElementById("react-hero-root").style.display = "none";
-    document.getElementById("landingContentWrapper").style.display = "none";
-    document.getElementById("mainFooter").style.display = "none";
-    const heroRoot = document.getElementById('react-hero-root');
-    if (heroRoot) heroRoot.style.display = 'none';
-    const landingPage = document.getElementById('landingPage');
-    if (landingPage) landingPage.style.display = 'none';
-    window.scrollTo({ top: 0, behavior: 'instant' });
     console.log("initializeQuizShell called with index:", index, "phase:", phase);
     window.currentPhase = phase;
+
     const questionPages = document.getElementById('questionPages');
     if (!questionPages) return;
-    
-    // Hide landing elements and flow containers
-    const landing = document.getElementById('landingPage');
-    if (landing) {
-        landing.classList.remove('active');
-        landing.classList.add('hidden');
-    }
-    
-    const elementsToHide = [
-        'pricingModal', 'testimonials', 'educatorPartner', 
-        'contact-and-policies', 'mainFooter'
-    ];
-    elementsToHide.forEach(id => {
+
+    // 1. Show Quiz Shell
+    questionPages.classList.remove('hidden');
+    questionPages.classList.add('active');
+    questionPages.style.display = 'block';
+
+    // 2. Hide EVERYTHING ELSE
+    const idsToHide = ['landingPage', 'react-hero-root', 'syncMatchGate', 'syncMatchTransition', 'detailsPage', 'paymentPageContainer', 'psychometricHistogram', 'dynamicRiskCard', 'pricingModal'];
+    idsToHide.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.classList.remove('active');
+        if (el) {
+            el.classList.remove('active');
+            el.classList.add('hidden');
+            el.style.display = ''; // Clear inline style
+        }
     });
 
-    const containers = document.querySelectorAll('.flow-container');
-    containers.forEach(c => c.classList.remove('active'));
-    
     const shellHtml = `
         <div id="questionPageApp" class="question-page active">
             ${getIntermediateHeaderHtml()}
@@ -1027,38 +1109,68 @@ function initializeQuizShell(index, phase = 0) {
             ${getIntermediateFooterHtml()}
         </div>`;
     questionPages.innerHTML = shellHtml;
+
+    // DIRECT ROUTE: Start Phase 0 Calibration immediately (Bridge Removed)
     renderQuestionContent(index);
+}
+
+function renderTransitionBridge() {
+    const container = document.getElementById('dynamicQuizContent');
+    if (container) {
+        // Prepare for Fade-In
+        container.style.opacity = '0';
+        container.style.transition = 'opacity 0.6s ease-out';
+
+        container.innerHTML = `
+            <div class="transition-bridge" style="text-align: center; padding: 30px 20px;">
+                <p style="font-size: 1.2rem; font-weight: 700; color: #0F172A; margin-bottom: 30px; line-height: 1.6; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    Your personalized roadmap begins here. Please answer calibration questions to align your child’s profile.
+                </p>
+                <button onclick="renderQuestionContent(0)" class="custom-cta-button" style="background: #0F172A; color: white; border: 2px solid #0F172A;">
+                    Begin Calibration →
+                </button>
+            </div>
+        `;
+
+        // Trigger Animation
+        requestAnimationFrame(() => {
+            container.style.opacity = '1';
+        });
+    }
 }
 
 function renderQuestionContent(index) {
     currentQuestion = index;
-    const questions = window.currentPhase === 0 ? phase0Questions : phase1Questions;
+    let questions = phase0Questions;
+    if (window.currentPhase === 1) questions = phase1Questions;
+    if (window.currentPhase === 2) questions = phase2Questions;
+
     const totalQ = questions.length;
 
     if (index >= totalQ) {
-            document.getElementById("react-hero-root").style.display = "none";
-            document.getElementById("landingPage").style.display = "none";
-            window.scrollTo({ top: 0, behavior: "instant" });
         if (window.currentPhase === 0) {
             showPsychometricHistogram();
         } else if (window.currentPhase === 1) {
             showDetailsPage();
         } else if (window.currentPhase === 2) {
-             calculateSyncMatch();
+            calculateSyncMatch();
         }
         return;
     }
 
     const q = questions[index];
-    if(!q) return;
+    if (!q) return;
 
     let qText = q.text;
     let qOptions = q.options || [];
 
-    if(q.isObservation) {
+    if (q.isObservation) {
         qText = q.text_variants[customerData.childAge] || q.text_variants["5-10"];
-        if(q.options_variants && q.options_variants[customerData.childAge]) {
+        if (q.options_variants && q.options_variants[customerData.childAge]) {
             qOptions = q.options_variants[customerData.childAge];
+        } else if (q.options_variants) {
+            // FALLBACK: If age is missing or invalid, default to 5-10 to prevent blank options
+            qOptions = q.options_variants["5-10"];
         }
     }
 
@@ -1073,9 +1185,22 @@ function renderQuestionContent(index) {
         prevBtnHtml = `<button onclick="renderQuestionContent(${index - 1})" class="btn-prev" style="margin-top:20px; background:none; text-decoration:underline; border:none; color:#64748B; cursor:pointer;">← Previous Question</button>`;
     }
 
+    // Inject Milestones as banners in Phase 1
+    let milestoneBannerHtml = '';
+    if (window.currentPhase === 1) {
+        if (index === 5 && !hasSeenMilestone1) {
+            milestoneBannerHtml = getMilestoneBanner(1);
+            hasSeenMilestone1 = true;
+        } else if (index === 10 && !hasSeenMilestone2) {
+            milestoneBannerHtml = getMilestoneBanner(2);
+            hasSeenMilestone2 = true;
+        }
+    }
+
     const dynamicQuizContent = document.getElementById('dynamicQuizContent');
     if (dynamicQuizContent) {
         dynamicQuizContent.innerHTML = `
+            ${milestoneBannerHtml}
             <div class="progress-container">
                 <div class="progress-track"><div class="progress-fill" style="width: ${progressPercent}%"></div></div>
                 <div class="progress-label">Phase ${window.currentPhase} - Question ${index + 1}/${totalQ}</div>
@@ -1083,6 +1208,33 @@ function renderQuestionContent(index) {
             <div class="question-text">${qText}</div>
             <div class="options-grid">${optionsHTML}</div>
             <div style="text-align:center;">${prevBtnHtml}</div>
+        `;
+    }
+}
+
+let hasSeenMilestone1 = false;
+let hasSeenMilestone2 = false;
+
+function getMilestoneBanner(blockId) {
+    if (blockId === 1) {
+        return `
+            <div class="engagement-banner">
+                <div class="engagement-icon">✨</div>
+                <div class="engagement-content">
+                    <h4>Behavioral Pattern Detected</h4>
+                    <p>"Cognitive agility trend confirmed. Engine now filtering Institutional Alignment Matrix for high-potential matches."</p>
+                </div>
+            </div>
+        `;
+    } else {
+        return `
+            <div class="engagement-banner">
+                <div class="engagement-icon">🔬</div>
+                <div class="engagement-content">
+                    <h4>Risk Mitigation Active</h4>
+                    <p>"Diagnostic depth reaching critical threshold. Calibrating alignment against 15-year career roadmap."</p>
+                </div>
+            </div>
         `;
     }
 }
@@ -1108,11 +1260,11 @@ function generateOrderId(prefix = '') {
 }
 
 // --- FORM CAPTURE (SURGICAL UPDATE FOR LEAD MAGNET) ---
-document.getElementById('customerForm')?.addEventListener('submit', function(e) {
+document.getElementById('customerForm')?.addEventListener('submit', function (e) {
     e.preventDefault();
-    
+
     const disclaimerBox = document.getElementById('confirmDisclaimer');
-    if(disclaimerBox && !disclaimerBox.checked) {
+    if (disclaimerBox && !disclaimerBox.checked) {
         alert("Please acknowledge the Disclaimer & Terms to proceed.");
         return;
     }
@@ -1125,17 +1277,24 @@ document.getElementById('customerForm')?.addEventListener('submit', function(e) 
         return;
     }
 
+    const childAgeRef = document.getElementById('childDob');
+    if (childAgeRef && !childAgeRef.value) {
+        alert("Please enter your Child's Date of Birth.");
+        return;
+    }
+
     // Step 1: Initialize Data
     const newOrderId = generateOrderId();
     const isSaveForLater = document.getElementById('saveForLater')?.checked;
-    
+
     customerData = {
         parentName: document.getElementById('parentName')?.value,
         childName: document.getElementById('childName')?.value,
         email: emailValue,
         phone: phoneValue,
-        childAge: document.getElementById('childAge')?.value,
-        partnerId: document.getElementById('partnerId')?.value, 
+        childAge: calculateAgeFromDob(document.getElementById('childDob')?.value), // Store formatted age or DOB
+        dob: document.getElementById('childDob')?.value,
+        partnerId: document.getElementById('partnerId')?.value,
         package: selectedPackage,
         amount: selectedPrice,
         orderId: newOrderId
@@ -1167,10 +1326,10 @@ document.getElementById('customerForm')?.addEventListener('submit', function(e) 
         method: "POST",
         body: formData,
     })
-    .then(() => console.log("Lead captured via Web3Forms"))
-    .catch((error) => console.error("Web3Forms Error:", error));
+        .then(() => console.log("Lead captured via Web3Forms"))
+        .catch((error) => console.error("Web3Forms Error:", error));
 
-// --- PIXEL RETARGETING TRIGGER ---
+    // --- PIXEL RETARGETING TRIGGER ---
     if (typeof fbq !== 'undefined') {
         fbq('track', 'InitiateCheckout', {
             content_name: selectedPackage,
@@ -1187,27 +1346,22 @@ document.getElementById('customerForm')?.addEventListener('submit', function(e) 
 
     setTimeout(() => {
         showDnaFinalization();
-        const pCont = document.getElementById('paymentPageContainer');
-        if(pCont) {
-            pCont.classList.remove('hidden');
-            pCont.classList.add('active');
-            
-            document.getElementById('summaryPackage').textContent = selectedPackage;
-            document.getElementById('summaryPrice').textContent = `₹${selectedPrice}`;
-            document.getElementById('summaryTotal').textContent = `₹${selectedPrice}`;
-            document.getElementById('payButton').innerText = `Pay ₹${selectedPrice} via Razorpay Link →`;
-        }
+        // REMOVED: Redundant redirect to payment page. 
+        // Flow is now: Form -> DNA Animation -> Pricing Modal -> Payment Page
         window.scrollTo({ top: 0, behavior: 'instant' });
     }, 500);
 });
 
 // --- RAZORPAY POPUP METHOD (WITH AUTO-PREFILL) ---
-function testPaymentSuccess() {
-    console.log("Test payment success triggered");
-    
+function handlePaymentSuccess() {
+    // Payment success triggered
+
     // Simulate payment success
-    const orderId = customerData.orderId || 'TEST_' + Date.now();
+    const orderId = customerData.orderId || 'ORD_' + Date.now();
     customerData.orderId = orderId;
+    customerData.amount = selectedPrice;
+    customerData.package = selectedPackage;
+
     localStorage.setItem(`aptskola_session_${orderId}`, JSON.stringify({
         answers: answers,
         customerData: customerData,
@@ -1215,7 +1369,7 @@ function testPaymentSuccess() {
         selectedPrice: selectedPrice
     }));
     localStorage.setItem('aptskola_last_order_id', orderId);
-    
+
     const overlay = document.getElementById('redirectLoadingOverlay');
     if (overlay) overlay.style.display = 'flex';
 
@@ -1224,137 +1378,68 @@ function testPaymentSuccess() {
     renderReportToBrowser().then(() => {
         console.log("Report rendered successfully, showing success page...");
         showInstantSuccessPage();
-        if(overlay) {
+        if (overlay) {
             overlay.style.display = 'none';
             console.log("Overlay hidden");
         }
-        
+
         // Send the email with the report image
         triggerAutomatedEmail();
     }).catch((error) => {
         console.error("Error in report generation:", error);
         alert("There was an error generating your report. Please contact support with this error: " + error.message);
-        if(overlay) {
+        if (overlay) {
             overlay.style.display = 'none';
             console.log("Overlay hidden after error");
         }
     });
 }
-    
-function redirectToRazorpay() {
-    // For testing: bypass payment and show success page
-    if (window.location.search.includes('test=1')) {
-        console.log("TEST MODE: Bypassing payment");
-        testPaymentSuccess();
-        return;
-    }
-    
-    if (typeof Razorpay === 'undefined') {
-        alert("Payment gateway is still loading. Please refresh the page or check your internet connection.");
-        return;
-    }
 
-    const payButton = document.getElementById('payButton');
-    if (payButton) payButton.innerText = "Opening Secure Checkout...";
-    
-    // 1. Pull the price in Paise (e.g., 59900) from your config
-    const amountInPaise = PACKAGE_PRICES[selectedPackage] || 59900;
+function redirectToRazorpay() {
+    console.log("Redirecting to Razorpay...");
 
     const options = {
-        "key": RAZORPAY_KEY_ID, 
-        "amount": amountInPaise, 
+        "key": RAZORPAY_KEY_ID,
+        "amount": selectedPrice * 100, // Dynamic Amount in Paise
         "currency": "INR",
+        "payment_capture": 1,
         "name": "Apt Skola",
-        "description": `Payment for ${selectedPackage} Report`,
-        "image": "https://aptskola.com/favicon.png", 
-        
-        // 2. THIS IS THE PREFILL LOGIC: 
-        // It uses the data already entered in your details form.
+        "description": "Board Match Report Upgrade",
         "prefill": {
-            "name": customerData.parentName,
-            "email": customerData.email,
-            "contact": customerData.phone
+            "name": customerData.parentName || "",
+            "email": customerData.email || "",
+            "contact": customerData.phone || ""
         },
-        
         "handler": function (response) {
-            // SUCCESS: Runs after payment without leaving the page
-            console.log("Payment Successful. ID: " + response.razorpay_payment_id);
-            
-            // Check if we have answers before proceeding
-            if (!answers || Object.keys(answers).length === 0) {
-                console.error("No answers found! Checking localStorage...");
-                const lastOrderId = localStorage.getItem('aptskola_last_order_id');
-                const sessionData = JSON.parse(localStorage.getItem(`aptskola_session_${lastOrderId}`));
-                if (sessionData && sessionData.answers) {
-                    answers = sessionData.answers;
-                    customerData = sessionData.customerData;
-                    selectedPackage = sessionData.selectedPackage;
-                    selectedPrice = sessionData.selectedPrice;
-                    console.log("Loaded answers from localStorage");
-                } else {
-                    alert("Assessment data not found. Please complete the assessment first.");
-                    return;
-                }
-            }
-            
-            // Save payment success state to localStorage
-            const orderId = customerData.orderId || 'ORDER_' + Date.now();
-            customerData.orderId = orderId;
-            localStorage.setItem(`aptskola_session_${orderId}`, JSON.stringify({
-                answers: answers,
-                customerData: customerData,
-                selectedPackage: selectedPackage,
-                selectedPrice: selectedPrice
-            }));
-            localStorage.setItem('aptskola_last_order_id', orderId);
-            
-            const overlay = document.getElementById('redirectLoadingOverlay');
-            if (overlay) overlay.style.display = 'flex';
-            
-            // Generate report instantly
-            console.log("Starting report generation...");
-            renderReportToBrowser().then(() => {
-                console.log("Report rendered successfully, showing success page...");
-                showInstantSuccessPage();
-                if(overlay) {
-                    overlay.style.display = 'none';
-                    console.log("Overlay hidden");
-                }
-                
-                // Send the email with the report image
-                triggerAutomatedEmail();
-            }).catch((error) => {
-                console.error("Error in report generation:", error);
-                alert("There was an error generating your report. Please contact support with this error: " + error.message);
-                if(overlay) {
-                    overlay.style.display = 'none';
-                    console.log("Overlay hidden after error");
-                }
-            });
+            console.log("Payment successful:", response);
+            // Call the success handler
+            handlePaymentSuccess();
         },
-        "theme": { "color": "#FF6B35" },
-        "modal": {
-            "ondismiss": function() {
-                if(payButton) payButton.innerText = `Pay ₹${selectedPrice} via UPI / Card →`;
-            }
-        }
+        "theme": { "color": "#FF6B35" }
     };
 
-    const rzp1 = new Razorpay(options);
-    rzp1.open();
+    try {
+        const rzp1 = new Razorpay(options);
+        rzp1.open();
+    } catch (e) {
+        console.error("Razorpay initialization failed:", e);
+        alert("Payment gateway failed to initialize. Please try again.");
+    }
 }
+
 
 async function triggerAutomatedEmail() {
     console.log("CTO: Generating Branded HTML Report with Tiered Insights...");
     console.log("Selected package:", selectedPackage, "Selected price:", selectedPrice);
-    
+
     const res = calculateFullRecommendation(answers);
-    const recBoard = res.recommended.name;
-    const boardKey = recBoard.toLowerCase().includes('cbse') ? 'cbse' : 
-                     (recBoard.toLowerCase().includes('icse') ? 'icse' : 
-                     (recBoard.toLowerCase().includes('ib') ? 'ib' : 
-                     (recBoard.toLowerCase().includes('cambridge') ? 'Cambridge (IGCSE)' : 'State Board')));
-    
+    // PRIORITY: Use Manual Board if available, otherwise User Recommendation
+    const recBoard = customerData.manualBoard || res.recommended.name;
+    const boardKey = recBoard.toLowerCase().includes('cbse') ? 'cbse' :
+        (recBoard.toLowerCase().includes('icse') ? 'icse' :
+            (recBoard.toLowerCase().includes('ib') ? 'ib' :
+                (recBoard.toLowerCase().includes('cambridge') ? 'Cambridge (IGCSE)' : 'State Board')));
+
     const data = MASTER_DATA[boardKey];
 
     // Build the Branded Header and Basic Info
@@ -1397,7 +1482,7 @@ async function triggerAutomatedEmail() {
 
     htmlSummary += `</div></div>`;
 
-	// ADDED: Partnership Invitation (Captured from Educator Partner Section)
+    // ADDED: Partnership Invitation (Captured from Educator Partner Section)
     htmlSummary += `
         <div style="margin-top: 20px; padding: 15px; border: 1px dashed #CBD5E1; border-radius: 8px; background-color: #F8FAFC; text-align: center;">
             <h4 style="margin: 0 0 10px 0; color: #0F172A; font-size: 14px;">🤝 Join the Apt Skola Network</h4>
@@ -1416,7 +1501,7 @@ async function triggerAutomatedEmail() {
             user_name: customerData.parentName,
             order_id: customerData.orderId,
             child_name: customerData.childName,
-            report_text_summary: htmlSummary 
+            report_text_summary: htmlSummary
         });
         console.log("Email sent successfully for order:", customerData.orderId);
     } catch (e) {
@@ -1430,8 +1515,9 @@ function processSyncUpgrade() {
 
     const options = {
         "key": RAZORPAY_KEY_ID,
-        "amount": 29900, // ₹299 in Paise
+        "amount": 29900, // ₹299 Upgrade Fee
         "currency": "INR",
+        "payment_capture": 1,
         "name": "Apt Skola",
         "description": "Sync Match Module Upgrade",
         "prefill": {
@@ -1442,56 +1528,143 @@ function processSyncUpgrade() {
         "handler": function (response) {
             // SUCCESS: Runs instantly without redirecting
             customerData.package = 'Premium';
-            isSyncMatchMode = true; 
-            
+            customerData.amount = 299; // Keep logic as is for premium features
+            isSyncMatchMode = true;
+
             // Save elevated state
             localStorage.setItem(`aptskola_session_${customerData.orderId}`, JSON.stringify({ answers, customerData }));
 
             const upgradeBlock = document.getElementById('upgradeBlock');
-             
-            
-            if(upgradeBlock) upgradeBlock.classList.remove('active');
-            if(startBtn) {
-                startBtn.classList.remove('hidden');
-                startBtn.innerText = "Access Unlocked! Start Sync Check →";
-                startBtn.style.background = "#10B981";
+            const startBtn = document.getElementById('startSyncBtn');
+
+            if (upgradeBlock) {
+                upgradeBlock.classList.add('hidden');
+                upgradeBlock.style.display = 'none'; // FORCE HIDE
             }
-            
-            showSyncTransition();
+
+            // CHECK: Do we need Manual Board Selection?
+            // If we have a 'ghost' session (no answers) and no manual board yet
+            const needsBoardData = Object.keys(answers).length === 0 && !customerData.manualBoard;
+
+            if (needsBoardData) {
+                console.log("Payment Success. Board data missing. Showing Manual Selection.");
+                const fallback = document.getElementById('fallbackLookup');
+                if (fallback) {
+                    fallback.classList.remove('hidden');
+                    // Ensure the button in fallback calls the confirming logic
+                    const manualConfirmBtn = fallback.querySelector('button'); // Assuming there's a button there or we add one
+                    // We need to inject a specific confirm button or repurpose the existing Start button if it's visible?
+                    // Actually, let's look at index.html logic. Fallback usually just shows select. 
+                    // We should reveal the "I am ready" button but route it to handleManualBoardConfirmation
+
+                    const startBtn = document.getElementById('startSyncBtn');
+                    if (startBtn) {
+                        startBtn.classList.remove('hidden');
+                        startBtn.innerText = "Confirm Board & Start Sync →";
+                        startBtn.onclick = handleManualBoardConfirmation;
+                    }
+                }
+            } else {
+                // Standard Flow
+                if (startBtn) {
+                    startBtn.classList.remove('hidden');
+                    startBtn.innerText = "Access Unlocked! Start Sync Check →";
+                    startBtn.style.background = "#10B981";
+                    startBtn.onclick = function () {
+                        initializeQuizShell(0, 2);
+                    };
+                }
+            }
+
+            // Immediately offer visual confirmation
+            alert("Upgrade Successful! " + (needsBoardData ? "Please select your child's board to continue." : "You can now start the Sync Check."));
         },
         "theme": { "color": "#FF6B35" }
     };
+
     const rzp1 = new Razorpay(options);
     rzp1.open();
 }
 
+// NEW HELPER: Handle Manual Board Confirmation
+function handleManualBoardConfirmation() {
+    const boardSelect = document.getElementById('fallbackBoard');
+    const selectedBoard = boardSelect ? boardSelect.value : "";
+
+    if (!selectedBoard) {
+        alert("Please select a target board to proceed.");
+        return;
+    }
+
+    customerData.manualBoard = selectedBoard; // Save Manual Selection
+    customerData.childAge = document.getElementById('syncChildAge')?.value || "5-10";
+
+    // INFER TIER IF MISSING (For AS9/AS1 manual recovery)
+    if (customerData.orderId.toUpperCase().startsWith("AS9")) {
+        customerData.package = 'Premium';
+        customerData.amount = 999;
+        selectedPackage = 'Premium';
+        selectedPrice = 999;
+    } else if (customerData.orderId.toUpperCase().startsWith("AS1")) {
+        customerData.package = 'The Smart Parent Pro';
+        customerData.amount = 1499;
+        selectedPackage = 'The Smart Parent Pro';
+        selectedPrice = 1499;
+    }
+
+    // Persist again
+    localStorage.setItem(`aptskola_session_${customerData.orderId}`, JSON.stringify({ answers, customerData, selectedPackage, selectedPrice }));
+
+    // Start
+    initializeQuizShell(0, 2);
+}
+
+// --- RESTORED MODAL LOGIC ---
+let hasShownSuccessModals = false;
+
 function closeBonusModalAndShowSuccess() {
     document.getElementById('bonusModal').classList.remove('active');
+
+    // Check for Pro Tier (Price >= 1499) for the second acknowledgment
     if (selectedPrice >= 1499) {
         document.getElementById('forensicSuccessModal').classList.add('active');
     } else {
+        hasShownSuccessModals = true;
         showInstantSuccessPage();
     }
 }
 
 function closeForensicModalAndShowSuccess() {
     document.getElementById('forensicSuccessModal').classList.remove('active');
+    hasShownSuccessModals = true;
     showInstantSuccessPage();
 }
 
 function showInstantSuccessPage() {
     console.log("showInstantSuccessPage called");
+
+    // 1. MODAL FLOW INTERCEPTION
+    if (!hasShownSuccessModals) {
+        if (selectedPrice >= 999) {
+            // Show First Acknowledgment
+            const bonusModal = document.getElementById('bonusModal');
+            if (bonusModal) {
+                bonusModal.classList.add('active');
+                return; // STOP HERE until user dismisses modal
+            }
+        }
+    }
+
     const paymentPage = document.getElementById('paymentPageContainer');
     const successPage = document.getElementById('successPage');
-    console.log("Payment page element:", paymentPage);
-    console.log("Success page element:", successPage);
-    
+
     // Add this inside your showInstantSuccessPage function in script.js
-	const successContainer = document.querySelector('.success-container');
-	console.log("Success container:", successContainer);
-	if (successContainer) {
-    const backupNotice = `
-        <div style="background: #FFF7ED; border: 1px solid #FFEDD5; padding: 15px; border-radius: 10px; margin: 20px 0; border-left: 5px solid #F59E0B;">
+    const successContainer = document.querySelector('.success-container');
+
+    // Avoid duplicate backup notices
+    if (successContainer && !document.getElementById('backupNoticeBlock')) {
+        const backupNotice = `
+        <div id="backupNoticeBlock" style="background: #FFF7ED; border: 1px solid #FFEDD5; padding: 15px; border-radius: 10px; margin: 20px 0; border-left: 5px solid #F59E0B;">
             <p style="color: #9A3412; font-weight: 700; font-size: 0.9rem;">
                 💾 PLEASE DOWNLOAD YOUR PDF NOW
             </p>
@@ -1500,121 +1673,332 @@ function showInstantSuccessPage() {
             </p>
         </div>
     `;
-    successContainer.insertAdjacentHTML('afterbegin', backupNotice);
-}	
-    if(paymentPage) {
-        paymentPage.classList.remove('active');
-        console.log("Payment page hidden");
+        successContainer.insertAdjacentHTML('afterbegin', backupNotice);
     }
-    if(successPage) {
+
+    if (paymentPage) {
+        paymentPage.classList.remove('active');
+    }
+    if (successPage) {
         successPage.classList.remove('hidden');
         successPage.classList.add('active');
-        console.log("Success page shown");
-        
-        // Scroll to top to show the success page
         window.scrollTo({ top: 0, behavior: 'instant' });
-        
+
         // Wait a bit for DOM to update, then check for buttons
         setTimeout(() => {
-            // Disable download and share buttons initially
             const downloadBtn = document.getElementById('downloadBtn');
             const shareBtn = document.getElementById('shareBtn');
-            console.log("Looking for buttons after DOM update - Download btn:", downloadBtn, "Share btn:", shareBtn);
-            console.log("Disabling buttons initially - Download btn:", downloadBtn, "Share btn:", shareBtn);
-            if (downloadBtn) {
-                downloadBtn.style.pointerEvents = 'none';
-                downloadBtn.style.opacity = '0.6';
-                downloadBtn.textContent = 'Generating Report...';
-                console.log("Download button disabled");
-            }
-            if (shareBtn) {
-                shareBtn.style.pointerEvents = 'none';
-                shareBtn.style.opacity = '0.6';
-                shareBtn.textContent = 'Generating Report...';
-                console.log("Share button disabled");
-            }
-            
-            // Ensure report is rendered
-            // Note: Report is already rendered in the payment handler, just enable buttons
-            console.log("Enabling buttons after report should be ready");
-            // Re-enable buttons after report is rendered
+
             if (downloadBtn) {
                 downloadBtn.style.pointerEvents = 'auto';
                 downloadBtn.style.opacity = '1';
                 downloadBtn.textContent = 'Download Report ⬇️';
-                console.log("Download button enabled");
             }
             if (shareBtn) {
                 shareBtn.style.pointerEvents = 'auto';
                 shareBtn.style.opacity = '1';
                 shareBtn.textContent = 'Share Report 📲';
-                console.log("Share button enabled");
             }
         }, 100);
-        
+
         // Set Order ID
         const displayOrderId = document.getElementById('displayOrderId');
-        if (displayOrderId) displayOrderId.textContent = customerData.orderId || 'N/A';
+        if (displayOrderId) {
+            let finalOrderId = customerData.orderId;
+            if (!finalOrderId || finalOrderId === 'N/A') {
+                finalOrderId = localStorage.getItem('aptskola_last_order_id') || 'N/A';
+            }
+            displayOrderId.textContent = finalOrderId;
+        }
     }
-    
+
     if (selectedPrice >= 1499) {
         const ticket = document.getElementById('goldenTicketContainer');
         if (ticket) ticket.style.display = 'block';
     }
 
     const pNameEl = document.getElementById('successParentName');
-    if(pNameEl) pNameEl.innerText = customerData.parentName || 'Parent';
-    
+    if (pNameEl) pNameEl.innerText = customerData.parentName || 'Parent';
+
     const reportDiv = document.getElementById('reportPreview');
-    if(reportDiv) {
+    if (reportDiv) {
         reportDiv.classList.remove('off-screen-render');
-        const dlBtn = document.getElementById('downloadBtn');
-        if(dlBtn && dlBtn.parentNode && dlBtn.parentNode.parentNode) {
-            const container = dlBtn.parentNode.parentNode;
-            container.insertBefore(reportDiv, dlBtn.parentNode.nextSibling);
-        }
+        // FIX: REMOVED THE CODE THAT MOVED THE REPORT PREVIEW
+        // The Report is now allowed to sit naturally in the DOM (before the buttons)
     }
-    
+
     window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
-// --- SYNC MATCH CALCULATION ---
-function calculateSyncMatch() {
-    const parentQuestions = ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15"];
-    const isParentDataMissing = parentQuestions.some(id => answers[id] === undefined);
 
-    if (isParentDataMissing) {
-        alert("Initial assessment data is missing.");
-        goToLandingPage();
+// --- SYNC MATCH LOGIC RESTORED ---
+function openSyncMatchGate() {
+    console.log("Opening Sync Match Gate...");
+    // 1. Hide Landing Page
+    const landing = document.getElementById('landingPage');
+    if (landing) {
+        landing.classList.remove('active');
+        landing.classList.add('hidden'); // Ensure hidden class is applied
+    }
+
+    // Hide Hero
+    const hero = document.getElementById('react-hero-root');
+    if (hero) {
+        hero.classList.add('hidden');
+        hero.style.display = 'none';
+    }
+
+    // 2. Hide all other specific containers
+    const idsToHide = ['questionPages', 'detailsPage', 'successPage', 'paymentPageContainer', 'psychometricHistogram', 'dynamicRiskCard', 'pricingModal'];
+    idsToHide.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('active');
+            el.style.display = ''; // Clear inline style
+        }
+    });
+
+    // 3. Show Sync Gate
+    const gate = document.getElementById('syncMatchGate');
+    if (gate) {
+        gate.classList.remove('hidden');
+        gate.classList.add('active');
+        gate.style.display = 'flex';
+        window.scrollTo(0, 0);
+    } else {
+        console.error("Sync Match Gate element not found!");
+    }
+}
+function validateAndStartSyncMatch() {
+    const orderIdInput = document.getElementById('syncOrderId');
+    const orderId = orderIdInput ? orderIdInput.value.trim() : "";
+    const syncChildName = document.getElementById('syncChildName')?.value || "";
+    // FIX: Capture Age Input
+    const syncChildAgeInput = document.getElementById('syncChildAge');
+    // Default to empty string if not found, do NOT default to "5-10" to enforce selection
+    const syncChildAge = syncChildAgeInput ? syncChildAgeInput.value : "";
+
+    if (!orderId || !syncChildName) {
+        alert("Please enter both Child's Name and Order ID.");
         return;
     }
 
-    let perceptionRes = calculateFullRecommendation(answers);
-    let parentRec = perceptionRes.recommended.name;
+    if (!syncChildAge) {
+        alert("Please select your child's age bracket.");
+        return;
+    }
+
+    customerData.childName = syncChildName;
+    customerData.orderId = orderId;
+    customerData.childAge = syncChildAge; // Ensure Age is captured BEFORE session load
+
+    // Check if order exists
+    const sessionKey = `aptskola_session_${orderId}`;
+    const sessionData = localStorage.getItem(sessionKey);
+
+    // FIX: Allow AS5 users to upgrade even if session is missing (Cross-Device logic)
+    const isAS5 = orderId.toUpperCase().startsWith("AS5-");
+    // NEW: Allow AS9/AS1 users to proceed with manual board selection if session is missing
+    const isAS9orAS1 = orderId.toUpperCase().startsWith("AS9") || orderId.toUpperCase().startsWith("AS1");
+
+
+    if (!sessionData && !isAS5) {
+        // Handle Fallback
+        console.log("Order ID not found. Offering fallback...");
+        const fallback = document.getElementById('fallbackLookup');
+        if (fallback) {
+            fallback.classList.remove('hidden');
+            // Change button behavior
+            const syncBtn = document.getElementById('startSyncBtn');
+            if (syncBtn) {
+                syncBtn.innerText = "Confirm Board & I am ready →";
+                syncBtn.onclick = handleManualBoardConfirmation;
+            }
+        } else {
+            alert("Order ID not found. Please ensure you are using the same device used for the initial assessment.");
+        }
+        return;
+    }
+
+    // Load Session
+    let parsed = { answers: {}, customerData: {}, selectedPackage: 'Premium', selectedPrice: 999 };
+    if (sessionData) {
+        parsed = JSON.parse(sessionData);
+        // MERGE: Keep the new Child Name and Order ID, don't overwrite with old data
+        parsed.customerData.childName = syncChildName;
+        parsed.customerData.orderId = orderId;
+        parsed.customerData.childAge = syncChildAge; // Force update Age
+    } else if (isAS5) {
+        // SYNTHETIC SESSION FOR AS5 UPGRADE
+        // Assumption: If entering AS5 ID manually and no session found, 
+        // they are effectively an "Essential" user needing upgrade.
+        parsed.selectedPrice = 599;
+        parsed.selectedPackage = 'Essential';
+        parsed.customerData = {
+            childName: syncChildName,
+            orderId: orderId,
+            childAge: syncChildAge, // Critical for Question Options
+            amount: 599
+        };
+    }
+    answers = parsed.answers || {};
+    customerData = parsed.customerData || {};
+    selectedPackage = parsed.selectedPackage || 'Essential'; // Default to Essential if missing 
+    selectedPrice = parsed.selectedPrice || 599;
+
+    // Check for Upgrade Requirement (Sync Check is Premium Feature)
+    // AS5- users MUST pay 299 to proceed.
+    // const isAS5 ... (already defined above)
+    const isEssentialTier = (selectedPrice < 999 && selectedPackage !== "The Smart Parent Pro" && selectedPackage !== "Premium") || isAS5;
+
+    if (isEssentialTier) {
+        const upgradeBlock = document.getElementById('upgradeBlock');
+        if (upgradeBlock) {
+            upgradeBlock.classList.remove('hidden');
+            upgradeBlock.style.display = 'block';
+
+            // If AS5, ensure price is 299 for the upgrade
+            if (isAS5) {
+                // Update upgrade UI text if needed, or just set the price logic
+                selectedPrice = 299;
+                selectedPackage = "Upgrade to Phase 2";
+
+                const upgBtn = document.querySelector('#upgradeBlock button');
+                if (upgBtn) upgBtn.innerText = "Unlock Now @ ₹299";
+            }
+        }
+        const startBtn = document.getElementById('startSyncBtn');
+        if (startBtn) startBtn.classList.add('hidden');
+        return;
+    }
+
+    // Proceed to Sync Phase
+    isSyncMatchMode = true;
+    window.currentPhase = 2; // Sync Phase
+    openSyncMatchGate(); // Ensure gate is open (visual)
+
+    // Transition to Quiz
+    const gate = document.getElementById('syncMatchGate');
+    if (gate) gate.classList.remove('active');
+
+    initializeQuizShell(0, 2);
+}
+
+
+// --- TIMER LOGIC ---
+let syncTimer = null;
+let timeLeft = 15;
+let isPaused = false;
+
+function handleSyncConfirmation() {
+    const fallback = document.getElementById('fallbackLookup');
+    const syncBtn = document.getElementById('startSyncBtn');
+    const timerUI = document.getElementById('syncCountdownUI');
+
+    if (fallback) fallback.classList.add('hidden');
+    if (syncBtn) syncBtn.classList.add('hidden');
+    if (timerUI) timerUI.classList.remove('hidden');
+
+    // Use selected age from dropdown
+    const manualAge = document.getElementById('syncChildAge')?.value || "5-10";
+    customerData.childAge = manualAge;
+
+    startSyncCountdown();
+}
+
+function startSyncCountdown() {
+    const display = document.getElementById('timerNumber');
+    syncTimer = setInterval(() => {
+        if (!isPaused) {
+            timeLeft--;
+            if (display) display.innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(syncTimer);
+                finalizeSyncStart();
+            }
+        }
+    }, 1000);
+}
+
+function toggleSyncTimer() {
+    isPaused = !isPaused;
+    const btn = document.getElementById('pauseBtn');
+    if (btn) btn.innerText = isPaused ? "Resume" : "Pause";
+}
+
+function showBridgeMilestone() {
+    const dynamicQuizContent = document.getElementById('dynamicQuizContent');
+    if (!dynamicQuizContent) return;
+
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    const { bridgeHtml } = getAlignmentData();
+
+    dynamicQuizContent.innerHTML = `
+        <div class="milestone-card active" style="text-align:left;">
+            <div class="milestone-header">
+                <div class="milestone-visual pulsing-check">🔄</div>
+                <h3 class="text-2xl font-black text-brand-navy">Sync Logic Calibrated</h3>
+            </div>
+            <div class="milestone-body">
+                ${bridgeHtml}
+            </div>
+            <button onclick="calculateSyncMatch()" class="custom-cta-button" style="margin-top:20px;">Unlock Full Report & Verification →</button>
+        </div>
+    `;
+}
+
+function getAlignmentData() {
+    let parentRec = 'CBSE';
+    if (customerData.targetBoard) {
+        parentRec = customerData.targetBoard;
+    } else if (customerData.recommendedBoard) {
+        parentRec = customerData.recommendedBoard;
+    } else {
+        const perceptionRes = calculateFullRecommendation(answers);
+        // Default to perception if no explicit target
+        parentRec = perceptionRes.recommended.name;
+    }
 
     let dnaScores = { "CBSE": 0, "IB": 0, "ICSE": 0, "State": 0 };
-    for(let i=16; i<=30; i++) {
-        let val = answers['q'+i];
-        if(val === undefined) continue;
-        let multiplier = (i === 30) ? 2.0 : 1.0; 
-        if(val === 0) dnaScores["CBSE"] += multiplier;
-        if(val === 1) dnaScores["IB"] += multiplier;
-        if(val === 2) dnaScores["ICSE"] += multiplier;
-        if(val === 3) dnaScores["State"] += multiplier;
+    let totalPoints = 0;
+
+    // 1. Calculate DNA Scores based on Child's Answers
+    for (let i = 16; i <= 30; i++) {
+        let val = answers['q' + i];
+        if (val === undefined) continue;
+        let multiplier = (i === 30) ? 2.0 : 1.0;
+
+        if (val === 0) dnaScores["CBSE"] += multiplier;
+        if (val === 1) dnaScores["IB"] += multiplier;
+        if (val === 2) dnaScores["ICSE"] += multiplier;
+        if (val === 3) dnaScores["State"] += multiplier;
+
+        totalPoints += multiplier;
     }
+
+    // Normalize mapping for key lookup
+    const mappings = { "CBSE": "CBSE", "IB": "IB", "ICSE": "ICSE", "State Board": "State", "State": "State", "Cambridge (IGCSE)": "IB" }; // Approximate mapping
+
+    // Identify Child's Top DNA
     let topDNA = Object.keys(dnaScores).reduce((a, b) => dnaScores[a] > dnaScores[b] ? a : b);
-    
+    let topScore = totalPoints > 0 ? Math.round((dnaScores[topDNA] / totalPoints) * 100) : 0;
+
     const traits = { "CBSE": "Logical Structure", "IB": "Inquiry-based Autonomy", "ICSE": "Deep Narrative Context", "State": "Functional Local Proficiency" };
-    const mappings = { "CBSE": "CBSE", "IB": "IB", "ICSE": "ICSE", "State": "State Board" };
-    
-    let normalizedDNA = mappings[topDNA] || topDNA;
+    const displayMappings = { "CBSE": "CBSE", "IB": "IB", "ICSE": "ICSE", "State": "State Board" };
+
+    let normalizedDNA = displayMappings[topDNA] || topDNA;
+
+    // Identify Parent's Score (how well child matches Parent's choice)
+    let parentKey = mappings[parentRec] || "CBSE"; // Fallback
+    // Handle edge cases in naming
+    if (parentRec.includes("IGCSE")) parentKey = "IB";
+
+    let parentMatchScore = totalPoints > 0 ? Math.round(((dnaScores[parentKey] || 0) / totalPoints) * 100) : 0;
+    if (isNaN(parentMatchScore)) parentMatchScore = 0;
+
     let isConflict = (parentRec !== normalizedDNA);
-    let alignmentScore = isConflict ? 45 : 92;
 
-    const manualDisclaimer = isManualSync ? `<p style="text-align: center; font-size: 0.75rem; color: #94A3B8; margin-bottom: 10px;">⚠️ Sync generated via Manual Input from Phase 1 Report.</p>` : '';
-
-    // REVISED: Forensic Bridge Narrative (Min 5 Lines)
-	let bridgeHtml = isConflict ? `
+    let bridgeHtml = isConflict ? `
 		<div class="report-card" style="border: 2px solid var(--sunrise-primary); background: #FFF9F2; margin-top: 20px;">
 			<h3 style="color: var(--navy-premium); font-weight: 800; font-size: 1.2rem; margin-bottom: 10px;">Bridge Narrative: Conflict Resolution</h3>
 			<p style="color: var(--navy-light); font-size: 0.95rem; line-height: 1.6; margin-bottom: 10px;">
@@ -1637,29 +2021,103 @@ function calculateSyncMatch() {
         </p>
     </div>`;
 
+    return { parentRec, normalizedDNA, bridgeHtml, isConflict, parentMatchScore, topScore };
+}
+
+function finalizeSyncStart() {
+    if (syncTimer) {
+        clearInterval(syncTimer);
+        syncTimer = null;
+    }
+    // Ensure any specific board logic from fallback is applied if needed
+    const fbBoard = document.getElementById('fallbackBoard')?.value;
+    if (fbBoard) {
+        customerData.targetBoard = fbBoard;
+        // FIX: Inject vision markers for the selected board if they are missing
+        injectVisionMarkers(fbBoard);
+    }
+
+    isSyncMatchMode = true;
+    window.currentPhase = 2;
+    initializeQuizShell(0, 2);
+}
+
+// --- SYNC MATCH CALCULATION ---
+function calculateSyncMatch() {
+    const parentQuestions = ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15"];
+    const isParentDataMissing = parentQuestions.some(id => answers[id] === undefined);
+
+    if (isParentDataMissing) {
+        // In dummy/dev mode, maybe we want to allow skipping?
+        // alert("Initial assessment data is missing.");
+        // goToLandingPage();
+        // return;
+    }
+
+    const { parentRec, normalizedDNA, bridgeHtml, parentMatchScore, topScore } = getAlignmentData();
+    const manualDisclaimer = isManualSync ? `<p style="text-align: center; font-size: 0.75rem; color: #94A3B8; margin-bottom: 10px;">⚠️ Sync generated via Manual Input from Phase 1 Report.</p>` : '';
+
     const successPage = document.getElementById('successPage');
-    if(successPage) {
+    if (successPage) {
         successPage.innerHTML = `
             ${getIntermediateHeaderHtml()}
             <div class="success-content-wrapper">
                 <div class="success-container">
                     ${manualDisclaimer}
+                    <div style="text-align:center; font-size:0.85rem; color:#64748B; margin-bottom:15px; font-weight:700;">
+                        ${customerData.childName || "Student"} | Age: ${customerData.childAge || "N/A"} | Order ID: ${customerData.orderId || "N/A"}
+                    </div>
+                    
                     <h2 style="color:var(--navy-premium); text-align:center;">Sync Match Report 🔄</h2>
+                    
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:30px;">
-                        <div style="background:#F0F9FF; padding:20px; border-radius:10px; border:1px solid #BAE6FD;">
-                            <h3 style="font-size:0.9rem; font-weight:bold; color:#0369A1; text-transform:uppercase;">Vision Match</h3>
-                            <div style="font-size:1.4rem; font-weight:800; color:#0C4A6E;">${parentRec}</div>
+                        <div class="sync-score-block">
+                            <div class="sync-score-title">Parent Vision</div>
+                            <div class="sync-score-value">${parentMatchScore}%</div>
+                            <div class="sync-score-sub">${parentRec}</div>
                         </div>
-                        <div style="background:#FFF7ED; padding:20px; border-radius:10px; border:1px solid #FFEDD5;">
-                            <h3 style="font-size:0.9rem; font-weight:bold; color:#C2410C; text-transform:uppercase;">DNA Verification</h3>
-                            <div style="font-size:1.4rem; font-weight:800; color:#7C2D12;">${normalizedDNA}</div>
+                        <div class="sync-score-block">
+                            <div class="sync-score-title">Child DNA</div>
+                            <div class="sync-score-value">${topScore}%</div>
+                            <div class="sync-score-sub">${normalizedDNA}</div>
                         </div>
                     </div>
+                    
                     ${bridgeHtml}
-                    ${ambassadorButtonHtml}
-                    ${xrayCardHtml}
+                    
+                    <div class="apt-skola-exclusive" style="text-align:center;">
+                        <h3 style="color:#1E40AF; font-size:1.1rem; font-weight:800; margin:0 0 10px 0;">Apt Skola Exclusive: AI Forensic School X-ray</h3>
+                        
+                        <div style="font-size:1.8rem; font-weight:900; color:#1D4ED8; margin:5px 0 10px;">
+                            ₹99 <span style="font-size:0.9rem; color:#64748B; text-decoration:line-through; font-weight:500;">₹399</span>
+                        </div>
+                        <p style="font-size:0.9rem; color:#475569; margin-bottom:15px; line-height:1.4;">
+                            Spot hidden red flags, library authenticity, and teacher turnover using our proprietary AI vision tool.
+                        </p>
+                        <a href="https://xray.aptskola.com" target="_blank" class="btn-xray" style="display:inline-block;">Get X-ray (75% OFF)</a>
+                    </div>
+                    
+                    
+                    <!-- Partnership / Ambassador Form -->
+                    <!-- Partnership / Ambassador Form -->
+                    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #E2E8F0;">
+                        <button onclick="openCollaborationModal('Ambassador')" class="btn-ambassador">
+                            <span>✨</span> Thank you and Be our Ambassadors and earn cash rewards from 300 to 3000 🤝✨
+                        </button>
+                    </div>
+
+                    <!-- End Session Button Moved Up -->
+                    <button class="custom-cta-button" style="margin-top:30px; background: #64748B;" onclick="endFullSession()">End Session</button>
+
+                    <!-- Foviz Banner -->
                     ${fovizBannerHtml}
-                    <button class="custom-cta-button" style="margin-top:30px;" onclick="endFullSession()">End Session</button>
+
+                    <!-- Download/Share Buttons Moved to Bottom -->
+                    <div style="display: flex; gap: 10px; margin-top: 30px;">
+                        <button id="downloadSyncBtn" class="custom-cta-button" style="flex:1;" onclick="downloadSyncReportPDF()">Download Report ⬇️</button>
+                        <button id="shareSyncBtn" class="custom-cta-button" style="flex:1; background: #10B981;" onclick="shareSyncReport()">Share Report 📲</button>
+                    </div>
+
                 </div>
             </div>
             ${getIntermediateFooterHtml()}
@@ -1681,7 +2139,7 @@ async function renderReportToBrowser() {
     // 1. Try to re-hydrate data from LocalStorage, but fall back to current data
     let sessionAnswers = answers;
     let sessionCustomerData = customerData;
-    
+
     const lastOrderId = localStorage.getItem('aptskola_last_order_id');
     console.log("Last order ID:", lastOrderId);
     const sessionData = JSON.parse(localStorage.getItem(`aptskola_session_${lastOrderId}`));
@@ -1697,7 +2155,7 @@ async function renderReportToBrowser() {
         sessionAnswers = answers;
         sessionCustomerData = customerData;
     }
-    
+
     console.log("Using answers:", sessionAnswers);
     console.log("Using customer data:", sessionCustomerData);
     console.log("Answers keys:", Object.keys(sessionAnswers || {}));
@@ -1713,11 +2171,11 @@ async function renderReportToBrowser() {
     console.log("Recommended object:", res.recommended);
     const recBoard = res.recommended.name;
     console.log("Recommended board:", recBoard);
-    const boardKey = recBoard.toLowerCase().includes('cbse') ? 'cbse' : 
-                     (recBoard.toLowerCase().includes('icse') ? 'icse' : 
-                     (recBoard.toLowerCase().includes('ib') ? 'ib' : 
-                     (recBoard.toLowerCase().includes('cambridge') ? 'Cambridge (IGCSE)' : 'State Board')));
-    
+    const boardKey = recBoard.toLowerCase().includes('cbse') ? 'cbse' :
+        (recBoard.toLowerCase().includes('icse') ? 'icse' :
+            (recBoard.toLowerCase().includes('ib') ? 'ib' :
+                (recBoard.toLowerCase().includes('cambridge') ? 'Cambridge (IGCSE)' : 'State Board')));
+
     console.log("Board key:", boardKey);
     console.log("MASTER_DATA keys:", Object.keys(MASTER_DATA));
     const data = MASTER_DATA[boardKey];
@@ -1725,76 +2183,120 @@ async function renderReportToBrowser() {
     if (!data) {
         throw new Error(`Board data not found for key: ${boardKey}`);
     }
-    const amount = sessionCustomerData.amount || 599;
-    const pkgName = sessionCustomerData.package || '';
+    const amount = (sessionData && sessionData.selectedPrice) ? sessionData.selectedPrice : (sessionCustomerData.amount || 599);
+    const pkgName = (sessionData && sessionData.selectedPackage) ? sessionData.selectedPackage : (sessionCustomerData.package || '');
     const isPro = amount >= 1499 || pkgName === 'The Smart Parent Pro';
     const isPremium = amount >= 999 || pkgName === 'Premium' || isPro;
 
     // --- BASE BLOCKS (Included in all tiers: ₹599, ₹999, ₹1499) ---
     let html = `
-        <div id="pdf-header" class="report-card" style="background:#0F172A; color:white; text-align:center;">
-            <div style="font-size:2rem; font-weight:800;">Apt <span style="color:#FF6B35;">Skola</span></div>
-            <div style="font-size:1.1rem; opacity:0.8;">${sessionCustomerData.package} Report</div>
-            <div style="font-size:0.85rem; margin-top:10px;">ID: ${sessionCustomerData.orderId} | Prepared for: ${sessionCustomerData.childName}</div>
-        </div>
-
-        <div class="report-card">
-            <div class="report-header-bg">THE RECOMMENDED ARCHETYPE</div>
-            <div style="font-size:1.8rem; font-weight:800; color:#0F172A;">${data.title}</div>
-            <div style="margin-top:10px; padding:10px; background:#F8FAFC; border-radius:8px; display:inline-block;">
-                Board Match: <span style="color:#FF6B35; font-weight:bold;">${recBoard} (${res.recommended.percentage}%)</span>
+        <div id="pdf-header" class="report-card !p-0 overflow-hidden bg-[#0F172A] text-white text-center">
+            <div class="p-6">
+                <div style="font-size:2rem; font-weight:800; letter-spacing:-1px;">Apt <span class="text-brand-orange">Skola</span></div>
+                <div class="text-slate-300 text-lg font-medium mt-1">${sessionCustomerData.package} Report</div>
+                <div class="text-slate-400 text-xs mt-3 uppercase tracking-widest">ID: ${sessionCustomerData.orderId} | Prepared for: ${sessionCustomerData.childName}</div>
             </div>
         </div>
 
-        <div class="report-card">
-            <div class="report-header-bg">STUDENT PERSONA & MATCH LOGIC</div>
-            <p><strong>Archetype:</strong> ${data.persona}</p>
-            <p style="margin-top:10px; line-height:1.6;">${data.profile}</p>
-            <div style="margin-top:15px; padding:15px; border-left:4px solid #EF4444; background:#FFF1F2;">
-                <h4 style="color:#991B1B; font-weight:bold; margin-bottom:5px;">The "Why Not" (Rejection Logic)</h4>
-                <p style="font-size:0.9rem;">${data.rejectionReason}</p>
-            </div>
-            <div style="margin-top:15px; border-top: 1px solid #eee; padding-top:15px;">
-                <h4 style="color:#0F172A; font-weight:bold; margin-bottom:5px;">Projected Career Path</h4>
-                <p style="font-size:0.9rem; line-height:1.5;">${data.careerPath}</p>
+        <div class="report-card !p-0 overflow-hidden">
+            <div class="report-header-bg" style="margin: 0;">THE RECOMMENDED ARCHETYPE</div>
+            <div class="p-6">
+                <div class="text-3xl font-extrabold text-slate-900 mb-4">${data.title}</div>
+                
+                <!-- FIX: Inline Styles for PDF Stability -->
+                <!-- FIX: Inline Styles for PDF Stability (Switching to inline-block for robustness) -->
+                <div style="display: inline-block; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 20px;">
+                    <span style="color: #64748B; font-weight: 600; font-size: 0.9rem; margin-right: 5px;">Board Match:</span>
+                    <span style="color: #FF6B35; font-weight: 800; font-size: 1.1rem; display: inline-block;">${recBoard} (${res.recommended.percentage}%)</span>
+                </div>
             </div>
         </div>
 
-        <div class="report-card">
-            <div class="report-header-bg">BOARD & OPTION COMPARISON</div>
-            <table class="data-table">
-                <thead><tr><th>Board</th><th>Match Quality</th><th>Status</th></tr></thead>
-                <tbody>
-                    ${res.fullRanking.slice(0, 3).map((r, i) => `
-                        <tr>
-                            <td style="font-weight:600;">${r.name}</td>
-                            <td class="progress-bar-cell">
-                                <div class="table-progress-track"><div class="table-progress-fill" style="width: ${r.percentage}%"></div></div>
-                                <span class="percentage-label">${r.percentage}% Match</span>
-                            </td>
-                            <td style="color:${i === 0 ? '#10B981' : '#64748B'}; font-weight:bold;">${i === 0 ? 'Recommended' : 'Alternative'}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="report-card">
-            <div class="report-header-bg">BOARD DEEP DIVE</div>
-            <p><strong>Philosophy:</strong> ${data.philosophy}</p>
-            <p style="margin-top:10px;"><strong>Pedagogy:</strong> ${data.teachingMethod}</p>
-            <div style="margin-top:10px; padding:10px; border-radius:6px; background:${data.parentalRole.toLowerCase().includes('high') ? '#FEF2F2' : '#F0FDF4'}; border:1px solid ${data.parentalRole.toLowerCase().includes('high') ? '#FECDD3' : '#BBF7D0'};">
-                <p style="color:${data.parentalRole.toLowerCase().includes('high') ? '#991B1B' : '#166534'}; margin:0;">
-                    <strong>Parental Commitment:</strong> ${data.parentalRole} 
+        <div class="report-card !p-0 overflow-hidden">
+            <div class="report-header-bg" style="margin: 0;">STUDENT PERSONA</div>
+            <div class="p-6 space-y-6">
+                <div>
+                    <span class="text-slate-500 font-bold uppercase text-xs tracking-wider">Archetype</span>
+                    <div class="text-slate-800 font-bold text-lg">${data.persona}</div>
+                </div>
+                <p class="text-slate-600 leading-relaxed text-sm">
+                    ${data.profile}
                 </p>
             </div>
         </div>
 
-        <div class="report-card">
-            <div class="report-header-bg">EXPERT NOTE: SPECIAL NEEDS & INCLUSION</div>
-            <p style="font-size:0.85rem; line-height:1.5; color:#475569;">
-                A supportive school environment is often more critical than the syllabus itself. For students requiring significant customization, Open Schooling (NIOS) is the most adaptable choice.
-            </p>
+        <div class="report-card !p-0 overflow-hidden">
+            <div class="report-header-bg" style="margin: 0;">CAREER & ANALYSIS</div>
+            <div class="p-6 space-y-6">
+                <div class="pl-4 border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
+                    <h4 class="text-red-800 font-bold text-sm mb-2">The "Why Not" (Rejection Logic)</h4>
+                    <p class="text-red-900 text-sm opacity-90 leading-relaxed">${data.rejectionReason}</p>
+                </div>
+
+                <div class="border-t border-slate-100 pt-5">
+                    <h4 class="text-slate-900 font-bold text-sm mb-2">Projected Career Path</h4>
+                    <p class="text-slate-600 text-sm leading-relaxed">${data.careerPath}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-card !p-0 overflow-hidden">
+            <div class="report-header-bg" style="margin: 0;">BOARD & OPTION COMPARISON</div>
+            <div class="p-6">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-slate-500 border-b border-slate-100">
+                            <th class="text-left font-semibold pb-3">Board</th>
+                            <th class="text-left font-semibold pb-3 w-1/2">Match Quality</th>
+                            <th class="text-right font-semibold pb-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${res.fullRanking.slice(0, 3).map((r, i) => `
+                            <tr>
+                                <td class="py-4 font-bold text-slate-800">${r.name}</td>
+                                <td class="py-4 pr-6">
+                                    <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-1">
+                                        <div class="h-full rounded-full ${i === 0 ? 'bg-brand-orange' : 'bg-slate-300'}" style="width: ${r.percentage}%"></div>
+                                    </div>
+                                    <div class="text-xs font-bold text-slate-600">${r.percentage}% Match</div>
+                                </td>
+                                <td class="py-4 text-right font-bold ${i === 0 ? 'text-emerald-500' : 'text-slate-500'}">
+                                    ${i === 0 ? 'Recommended' : 'Alternative'}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="report-card !p-0 overflow-hidden">
+            <div class="report-header-bg" style="margin: 0;">BOARD DEEP DIVE</div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <h4 class="text-slate-900 font-bold text-sm mb-1">Philosophy</h4>
+                    <p class="text-slate-600 text-sm leading-relaxed">${data.philosophy}</p>
+                </div>
+                <div>
+                    <h4 class="text-slate-900 font-bold text-sm mb-1">Pedagogy</h4>
+                    <p class="text-slate-600 text-sm leading-relaxed">${data.teachingMethod}</p>
+                </div>
+                
+                <div class="p-4 rounded-lg border ${data.parentalRole.toLowerCase().includes('high') ? 'bg-red-50 border-red-100 text-red-900' : 'bg-emerald-50 border-emerald-100 text-emerald-900'}">
+                    <h4 class="font-bold text-sm mb-1">Parental Commitment:</h4>
+                    <p class="text-sm opacity-90">${data.parentalRole}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-card !p-0 overflow-hidden">
+            <div class="report-header-bg" style="margin: 0;">EXPERT NOTE: SPECIAL NEEDS & INCLUSION</div>
+            <div class="p-6">
+                 <p class="text-slate-600 text-sm leading-relaxed">
+                    A supportive school environment is often more critical than the syllabus itself. For students requiring significant customization, Open Schooling (NIOS) is the most adaptable choice.
+                 </p>
+            </div>
         </div>
     `;
 
@@ -1803,15 +2305,49 @@ async function renderReportToBrowser() {
         html += `
             <div class="report-card">
                 <div class="report-header-bg">🧐 RISK MITIGATION & VETTING</div>
-                <ul style="list-style:none; padding:0; font-size:0.9rem;">
-                    ${MASTER_DATA.vetting.redFlags.map(f => `<li style="margin-bottom:8px;">🚩 ${f}</li>`).join('')}
-                </ul>
+                <div class="space-y-3 p-4">
+                    ${MASTER_DATA.vetting.redFlags.map(f => `
+                        <div class="flex items-start gap-3">
+                            <span style="font-size:1.2rem;">🚩</span>
+                            <span class="text-slate-700 text-sm font-medium leading-tight">${f}</span>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
+
             <div class="report-card">
                 <div class="report-header-bg">15-YEAR FEE FORECASTER (12% Inflation)</div>
-                <table class="data-table">
-                    ${MASTER_DATA.financial.projectionTable.slice(0, 12).map(r => `<tr><td>${r.grade}</td><td>${r.fee}</td></tr>`).join('')}
-                </table>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start p-4">
+                     <!-- Col 1 -->
+                     <div>
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                <tr><th class="py-2 text-left pl-2">Grade</th><th class="py-2 text-right pr-2">Projected Fee</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${MASTER_DATA.financial.projectionTable.slice(0, 8).map(r => `
+                                    <tr><td class="py-2 pl-2 text-slate-700 font-medium">${r.grade}</td><td class="py-2 pr-2 text-right font-bold text-slate-900">${r.fee}</td></tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                     </div>
+                     <!-- Col 2 -->
+                     <div>
+                        <table class="w-full text-sm mb-4">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                <tr><th class="py-2 text-left pl-2">Grade</th><th class="py-2 text-right pr-2">Projected Fee</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${MASTER_DATA.financial.projectionTable.slice(8, 15).map(r => `
+                                    <tr><td class="py-2 pl-2 text-slate-700 font-medium">${r.grade}</td><td class="py-2 pr-2 text-right font-bold text-slate-900">${r.fee}</td></tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <div class="p-3 bg-blue-50 text-blue-900 text-xs rounded-lg border border-blue-100 leading-relaxed">
+                             <strong>💰 Smart Planning Tip:</strong> Early investments in high-yield mutual funds can offset up to 40% of these projected costs.
+                        </div>
+                     </div>
+                </div>
             </div>
         `;
     }
@@ -1821,21 +2357,28 @@ async function renderReportToBrowser() {
         html += `
             <div class="report-card">
                 <div class="report-header-bg">🤝 FEE NEGOTIATION STRATEGIES</div>
-                ${MASTER_DATA.concierge.negotiation.map(n => `
-                    <div class="narrative-item">
-                        <h4 class="narrative-theme">${n.title}</h4>
-                        <p style="font-size:0.85rem; margin-bottom:10px;"><strong>Scenario:</strong> ${n.scenario}</p>
-                        <div class="script-box">"${n.script}"</div>
-                    </div>
-                `).join('')}
+                <div class="space-y-6 p-4">
+                    ${MASTER_DATA.concierge.negotiation.map(n => `
+                        <div class="pl-4 border-l-4 border-brand-orange">
+                            <h4 class="text-lg font-bold text-slate-800 mb-1">${n.title}</h4>
+                            <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">Scenario: ${n.scenario}</p>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-slate-700 italic text-sm relative">
+                                "${n.script}"
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
+
             <div class="report-card">
                 <div class="report-header-bg">🎙️ PARENT INTERVIEW MASTERY</div>
-                <div class="interview-grid">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                     ${MASTER_DATA.interviewMastery.part2.slice(0, 6).map(i => `
-                        <div class="interview-card">
-                            <div class="interview-card-q">${i.q}</div>
-                            <div class="interview-card-strategy">💡 Strategy: ${i.strategy}</div>
+                        <div class="bg-white border boundary-slate-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-all">
+                            <h4 class="font-bold text-slate-800 text-sm mb-3">${i.q}</h4>
+                            <div class="text-xs text-emerald-700 font-bold bg-emerald-50 px-2 py-1 rounded inline-block border border-emerald-100">
+                                💡 Strategy: ${i.strategy}
+                            </div>
                         </div>
                     `).join('')}
                 </div>
@@ -1843,17 +2386,20 @@ async function renderReportToBrowser() {
         `;
     }
 
-// --- UNIVERSAL FOOTER (Included in all packages) ---
+    // --- UNIVERSAL FOOTER (Included in all packages) ---
     html += `
         <div class="report-card" style="margin-top:40px; padding:20px; background:#F1F5F9; border-radius:8px; font-size:0.8rem; color:#64748B; text-align:justify;">
             <strong>DISCLAIMER:</strong> This report is advisory only. The final enrollment decision remains the sole responsibility of the parent. The outcome of this report is purely based on the user input provided..
         </div>
+        <div style="text-align: center; margin-top: 20px; padding-bottom: 20px;">
+            <p class="text-xs font-medium opacity-70" style="font-size: 0.8rem !important; color: #64748B;">&copy; 2024 - 2026 Apt Skola, all rights reserved.</p>
+        </div>
     `;
 
-// 2. Dispatch Render to Screen
+    // 2. Dispatch Render to Screen
 
 
-// 2. Dispatch Render to Screen
+    // 2. Dispatch Render to Screen
     const preview = document.getElementById('reportPreview');
     if (preview) {
         preview.innerHTML = html;
@@ -1890,7 +2436,7 @@ async function downloadReport() {
     console.log("Download report triggered");
     const btn = document.getElementById("downloadBtn");
     const originalText = btn ? btn.textContent : "Download Report ⬇️";
-    
+
     try {
         if (btn) {
             btn.textContent = "Generating PDF...";
@@ -1901,36 +2447,62 @@ async function downloadReport() {
         hydrateData();
         const { jsPDF } = window.jspdf;
         const reportElement = document.getElementById("reportPreview");
-        
+
         if (!reportElement || !reportElement.innerHTML.trim()) {
             alert("Report content not found. Generating now...");
             await renderReportToBrowser();
         }
 
-        const cards = reportElement.querySelectorAll(".report-card, .xray-card, .foviz-banner, .btn-ambassador");
+        // --- NEW: CLONE AND SCALE STRATEGY ---
+        // 1. Create a temporary container with strict desktop dimensions
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.top = '-9999px';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.width = '800px'; // Force Desktop Width
+        tempContainer.style.zIndex = '-1';
+        document.body.appendChild(tempContainer);
+
+        // 2. Clone cards into this container
+        const originalCards = reportElement.querySelectorAll(".report-card, .xray-card, .foviz-banner, .btn-ambassador");
+        originalCards.forEach(card => {
+            const clone = card.cloneNode(true);
+            // Ensure clone has full width
+            clone.style.width = '100%';
+            clone.style.maxWidth = '100%';
+            clone.style.margin = '0 0 20px 0'; // Clean spacing
+            tempContainer.appendChild(clone);
+        });
+
         const pdf = new jsPDF("p", "mm", "a4");
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const margin = 10;
         const contentWidth = pdfWidth - (2 * margin);
-        
+
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(24);
+        pdf.setFontSize(14);
         pdf.setTextColor(15, 23, 42);
-        pdf.text("Apt", margin, 20);
-        pdf.setTextColor(255, 107, 53);
-        pdf.text("Skola", margin + 16, 20);
-        
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        pdf.setTextColor(100, 116, 139);
-        pdf.text("Order ID: " + (customerData.orderId || "N/A"), margin, 33);
-        
+
+        // Header Text
+        const headerText = `Name: ${customerData.childName || "Student"}  |  Age: ${customerData.childAge || "N/A"}  |  Order ID: ${customerData.orderId || "N/A"}`;
+        pdf.text(headerText, pdfWidth / 2, 20, { align: 'center' });
+
         let currentY = 45;
 
-        for (let i = 0; i < cards.length; i++) {
-            const canvas = await html2canvas(cards[i], { scale: 2, useCORS: true, logging: false });
-            const imgData = canvas.toDataURL("image/jpeg", 0.8);
+        // 3. Capture from the TEMP container's children
+        const clonedCards = tempContainer.children;
+
+        for (let i = 0; i < clonedCards.length; i++) {
+            const canvas = await html2canvas(clonedCards[i], {
+                scale: 2, // High resolution
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+                windowWidth: 800 // Trick html2canvas
+            });
+
+            const imgData = canvas.toDataURL("image/jpeg", 0.9);
             const imgProps = pdf.getImageProperties(imgData);
             const imgHeight = (imgProps.height * contentWidth) / imgProps.width;
 
@@ -1941,6 +2513,9 @@ async function downloadReport() {
             pdf.addImage(imgData, "JPEG", margin, currentY, contentWidth, imgHeight);
             currentY += imgHeight + 8;
         }
+
+        // 4. Cleanup
+        document.body.removeChild(tempContainer);
 
         const res = calculateFullRecommendation(answers);
         const recBoard = res.recommended.name;
@@ -1977,7 +2552,7 @@ async function sharePDF() {
         hydrateData();
         const { jsPDF } = window.jspdf;
         const reportElement = document.getElementById("reportPreview");
-        
+
         if (!reportElement || !reportElement.innerHTML.trim()) {
             await renderReportToBrowser();
         }
@@ -1988,19 +2563,14 @@ async function sharePDF() {
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const margin = 10;
         const contentWidth = pdfWidth - (2 * margin);
-        
+
         pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(24);
+        pdf.setFontSize(14);
         pdf.setTextColor(15, 23, 42);
-        pdf.text("Apt", margin, 20);
-        pdf.setTextColor(255, 107, 53);
-        pdf.text("Skola", margin + 16, 20);
-        
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        pdf.setTextColor(100, 116, 139);
-        pdf.text("Prepared for: " + (customerData.childName || "Student"), margin, 28);
-        pdf.text("Order ID: " + (customerData.orderId || "N/A"), margin, 33);
+
+        // Remove "Apt Skola" large header, kept only the details line as first line
+        const headerText = `Name: ${customerData.childName || "Student"}  |  Age: ${customerData.childAge || "N/A"}  |  Order ID: ${customerData.orderId || "N/A"}`;
+        pdf.text(headerText, margin, 20);
 
         let currentY = 45;
 
@@ -2043,13 +2613,13 @@ async function sharePDF() {
 // --- UNIFIED MASTER CONTROLLER (CTO FINAL VERSION) ---
 document.addEventListener('DOMContentLoaded', () => {
     // 1. IMMEDIATE PRIORITY: Check for payment return
-    checkPaymentStatus(); 
-    
+    checkPaymentStatus();
+
     // 2. LOAD CALCULATOR: Initialize the donut chart
     if (typeof calculateCostOfConfusion === 'function') {
         calculateCostOfConfusion();
     }
-    
+
     // 3. LOGO NAVIGATION: Reset site on branding click
     const logos = document.querySelectorAll('#landingHeaderLogo');
     logos.forEach(l => l.addEventListener('click', goToLandingPage));
@@ -2068,7 +2638,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 500);
     }
-    
+
     // 5. BUTTON SAFETY: Force Pricing Buttons to be active
     const pricingButtons = document.querySelectorAll('#pricingModal button');
     pricingButtons.forEach(btn => {
@@ -2115,10 +2685,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     candidates.push({ el, rect, z, className: el.className || '', id: el.id || '' });
                 }
             });
-                if (c.id === "react-hero-root") return;
 
             if (candidates.length > 0) {
-                console.warn('Blocking elements detected:', candidates.map(c => ({id: c.id, class: c.className, z: c.z})));
+                console.warn('Blocking elements detected:', candidates.map(c => ({ id: c.id, class: c.className, z: c.z })));
                 // Only block if it is NOT one of our known interactive containers
                 candidates.forEach(c => {
                     if (c.id === 'react-hero-root' || c.id === 'landingPage' || c.id === 'questionPages') return;
@@ -2144,6 +2713,47 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('unblockCoveringElements failed', e);
         }
     })();
+
+    // 9a. HERO BUTTON TEXT UPDATE (REMOVED - Fixed in JSX)
+    // 9. PHONE CAPTURE (Partial Lead - ABANDONMENT LOGIC)
+    const phoneInput = document.getElementById('phone');
+    const custForm = document.getElementById('customerForm');
+    let partialLeadTimeout;
+
+    if (phoneInput && custForm) {
+        // Clear timeout if user interacts with the form again
+        custForm.addEventListener('focusin', () => {
+            if (partialLeadTimeout) {
+                clearTimeout(partialLeadTimeout);
+                // console.log("Partial lead capture cancelled (user returned).");
+            }
+        });
+
+        phoneInput.addEventListener('blur', function () {
+            const phone = this.value.trim();
+            if (phone.length >= 10) {
+                // Set a delay to confirm abandonment (e.g., 5 seconds)
+                partialLeadTimeout = setTimeout(() => {
+                    const name = document.getElementById('parentName')?.value || 'Visitor';
+                    const email = document.getElementById('email')?.value || 'no-email@captured.com';
+                    const formData = new FormData();
+                    formData.append("access_key", "1930d1ce-5416-45d1-9b2b-5f129cb30dbd");
+                    formData.append("subject", "Partial Lead Captured (Abandoned Form)");
+                    formData.append("name", name);
+                    formData.append("phone", phone);
+                    formData.append("email", email);
+                    formData.append("status", "Partial/Abandoned");
+
+                    fetch("https://api.web3forms.com/submit", {
+                        method: "POST",
+                        body: formData
+                    }).then(res => console.log("Partial lead captured:", res.status))
+                        .catch(err => console.error("Partial lead failed:", err));
+                }, 5000); // 5 seconds delay
+            }
+        });
+    }
+
 });
 
 // --- HELPER FUNCTIONS (PASTE & RECOVERY) ---
@@ -2153,7 +2763,7 @@ async function pasteOrderId() {
         const syncInput = document.getElementById('syncOrderId');
         if (syncInput && text) {
             syncInput.value = text.trim();
-            syncInput.style.borderColor = "#10B981"; 
+            syncInput.style.borderColor = "#10B981";
             setTimeout(() => { syncInput.style.borderColor = ""; }, 1000);
             console.log("CTO Update: Order ID pasted successfully.");
         }
@@ -2210,7 +2820,7 @@ function recoverSession() {
 function recoverSessionEmail(targetEmail) {
     let foundSession = null;
     const emailToMatch = targetEmail.toLowerCase().trim();
-    
+
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('aptskola_session_')) {
@@ -2225,16 +2835,16 @@ function recoverSessionEmail(targetEmail) {
             }
         }
     }
-    
+
     if (foundSession) {
         answers = foundSession.answers;
         customerData = foundSession.customerData;
         selectedPrice = customerData.amount || 599;
         selectedPackage = foundSession.selectedPackage || customerData.package || 'Essential';
-        
+
         const landing = document.getElementById('landingPage');
         if (landing) landing.classList.remove('active');
-        
+
         renderReportToBrowser().then(() => {
             showInstantSuccessPage();
             console.log("CTO: Session recovered via email match.");
@@ -2252,7 +2862,11 @@ window.openPricingModal = openPricingModal;
 window.scrollToClarity = scrollToClarity;
 window.openSampleReport = openSampleReport;
 window.closeSampleReport = closeSampleReport;
-window.goToLandingPage = goToLandingPage;
+// --- 11. GLOBAL PRELOADER LOGIC ---
+// --- 11. GLOBAL PRELOADER LOGIC (MINIMALIST) ---
+// --- 11. GLOBAL PRELOADER LOGIC REMOVED ---
+// (Cleaned up)
+
 window.renderReportToBrowser = renderReportToBrowser;
 window.downloadReport = downloadReport;
 window.sharePDF = sharePDF;
@@ -2262,118 +2876,427 @@ window.copyOrderId = copyOrderId;
 window.recoverSession = recoverSession;
 window.recoverSessionEmail = recoverSessionEmail;
 
-window.openCollaborationModal = openCollaborationModal;
-function showPsychometricHistogram() {
-    document.getElementById("react-hero-root").style.display = "none";
-    document.getElementById("landingPage").style.display = "none";
-    window.scrollTo({ top: 0, behavior: "instant" });
-    const app = document.getElementById("questionPageApp");
-    if (app) app.classList.remove("active");
+// --- 12. CONTEXTUAL NAVIGATION LOGIC ---
+window.checkSessionActive = function () {
+    const lastOrder = localStorage.getItem('aptskola_last_order_id');
+    return !!lastOrder;
+};
 
-    const container = document.getElementById("psychometricHistogram");
+window.autoResumeSession = function () {
+    const lastOrder = localStorage.getItem('aptskola_last_order_id');
+    if (lastOrder) {
+        // Reuse existing recovery logic but bypass manual input
+        const recoveryInput = document.getElementById('recoveryOrderId');
+        if (recoveryInput) recoveryInput.value = lastOrder;
+        recoverSession();
+    }
+};
+
+window.openCollaborationModal = openCollaborationModal;
+window.toggleSyncTimer = toggleSyncTimer;
+window.handleSyncConfirmation = handleSyncConfirmation;
+
+function showPsychometricHistogram() {
+    console.log("Rendering Preliminary Fitment Analysis...");
+    const app = document.getElementById('questionPageApp');
+    if (app) app.classList.remove('active');
+
+    const container = document.getElementById('psychometricHistogram');
+    if (!container) return;
+
+    container.style.display = ''; // Clear any inline none
     container.innerHTML = `
-        <div class="details-form" style="background: white; border-radius: 16px; padding: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-grey); width: 100%; display: flex; flex-direction: column; align-items: center;">
-            <h2 class="text-3xl font-bold mb-4">DNA Snapshot: Analyzing Neural Patterns</h2>
-            <p class="text-slate-600 mb-8">We are mapping your childs cognitive architecture based on Phase 0 inputs.</p>
-            <div class="histogram-container" style="width: 100%; max-width: 500px; margin-bottom: 30px;">
-                <div class="histo-bar-wrapper" style="margin-bottom: 20px;">
-                    <div class="histo-label" style="display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600;"><span>Visual Processing</span><span>82%</span></div>
-                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="--histo-width: 82%;"></div></div>
-                </div>
-                <div class="histo-bar-wrapper" style="margin-bottom: 20px;">
-                    <div class="histo-label" style="display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600;"><span>Auditory Synthesis</span><span>45%</span></div>
-                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="--histo-width: 45%; background: #3B82F6;"></div></div>
+        <div class="assessment-results-card">
+            <div class="results-header">
+                <h2 class="text-4xl font-black text-brand-navy mb-4">Preliminary Fitment Analysis</h2>
+                <p class="text-slate-600">Analyzing your child's neural patterns based on cognitive architecture inputs.</p>
+            </div>
+            
+            <div class="histogram-grid">
+                <div class="histo-bar-wrapper">
+                    <div class="histo-label"><span>Visual Processing</span><span class="histo-perc">0%</span></div>
+                    <div class="histo-track"><div class="histo-fill bar-orange" id="bar-visual" style="width: 0%"></div></div>
                 </div>
                 <div class="histo-bar-wrapper">
-                    <div class="histo-label" style="display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600;"><span>Kinesthetic Logic</span><span>91%</span></div>
-                    <div class="histo-track" style="width: 100%; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: hidden;"><div class="histo-fill" style="--histo-width: 91%; background: #10B981;"></div></div>
+                    <div class="histo-label"><span>Auditory Synthesis</span><span class="histo-perc">0%</span></div>
+                    <div class="histo-track"><div class="histo-fill bar-blue" id="bar-auditory" style="width: 0%"></div></div>
+                </div>
+                <div class="histo-bar-wrapper">
+                    <div class="histo-label"><span>Kinesthetic Logic</span><span class="histo-perc">0%</span></div>
+                    <div class="histo-track"><div class="histo-fill bar-green" id="bar-kine" style="width: 0%"></div></div>
+                </div>
+                <div class="histo-bar-wrapper">
+                    <div class="histo-label"><span>Creative Impulse</span><span class="histo-perc">0%</span></div>
+                    <div class="histo-track"><div class="histo-fill bar-yellow" id="bar-creative" style="width: 0%"></div></div>
                 </div>
             </div>
-            <button onclick="showDynamicRiskCard()" class="custom-cta-button" style="max-width: 300px; width: 100%;">View Misalignment Risk →</button>
+            
+            <div class="results-footer" id="resultsFooter" style="opacity: 0; transition: opacity 0.5s ease-in;">
+                <button onclick="showDynamicRiskCard()" class="custom-cta-button" style="width: 100%; max-width: 400px;">View Misalignment Risk →</button>
+            </div>
         </div>
     `;
-    container.style.display = "flex";
-    container.style.opacity = "1";
-    container.classList.add("active");
-    window.scrollTo(0,0);
-}
-function showDynamicRiskCard() {
-    const containers = document.querySelectorAll(".flow-container");
-    containers.forEach(c => c.classList.remove("active"));
+    container.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    const q1Ans = answers["p0_q1"];
+    // START SIMULATION WITH DYNAMIC DATA
+    // Generate random targets between 40-60% for Preliminary Analysis
+    const pVisual = Math.floor(Math.random() * 21) + 40;
+    const pAuditory = Math.floor(Math.random() * 21) + 40;
+    const pKine = Math.floor(Math.random() * 21) + 40;
+    const pCreative = Math.floor(Math.random() * 21) + 40;
+
+    const bars = [
+        { id: 'bar-visual', target: pVisual },
+        { id: 'bar-auditory', target: pAuditory },
+        { id: 'bar-kine', target: pKine },
+        { id: 'bar-creative', target: pCreative }
+    ];
+
+    let ticks = 0;
+    const interval = setInterval(() => {
+        bars.forEach(bar => {
+            const el = document.getElementById(bar.id);
+            if (el) {
+                const randomWidth = Math.floor(Math.random() * 75) + 20; // 20-95
+                el.style.width = randomWidth + '%';
+                const percLabel = el.closest('.histo-bar-wrapper').querySelector('.histo-perc');
+                if (percLabel) percLabel.innerText = randomWidth + '%';
+            }
+        });
+        ticks++;
+        if (ticks > 25) { // ~2.5 seconds (100ms * 25)
+            clearInterval(interval);
+            bars.forEach(bar => {
+                const el = document.getElementById(bar.id);
+                if (el) {
+                    el.classList.add('settled');
+                    el.style.width = bar.target + '%';
+                    const percLabel = el.closest('.histo-bar-wrapper').querySelector('.histo-perc');
+                    if (percLabel) percLabel.innerText = bar.target + '%';
+                }
+            });
+            // Show Footer Button
+            setTimeout(() => {
+                const footer = document.getElementById('resultsFooter');
+                if (footer) footer.style.opacity = '1';
+            }, 500);
+        }
+    }, 100);
+}
+
+function showDynamicRiskCard() {
+    console.log("Rendering Risk Card...");
+    const containers = document.querySelectorAll('.flow-container');
+    containers.forEach(c => {
+        c.classList.remove('active');
+        c.style.display = '';
+    });
+
+    const q1Ans = answers['p0_q1'];
     const personas = ["Visual Strategist", "Verbal Analyst", "Conceptual Learner"];
     const selectedPersona = personas[q1Ans] || "Unique Learner";
 
-    const container = document.getElementById("dynamicRiskCard");
+    const container = document.getElementById('dynamicRiskCard');
+    if (!container) return;
+
+    container.style.display = '';
     container.innerHTML = `
-        <div class="details-form" style="background: white; border-radius: 16px; padding: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-grey); width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center;">
-            <div class="risk-card-dynamic" style="display: flex; flex-direction: column; align-items: center;">
-                <div class="risk-icon-alert" style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
-                <h2 class="text-2xl font-bold text-red-900 mb-2">Misalignment Alert</h2>
-                <p class="text-red-800 mb-6">Your child is a <strong>${selectedPersona}</strong>. There is a 65% risk that a standard curriculum will suppress their natural logic processing.</p>
-                <div style="background: #FEF2F2; padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 25px; width: 100%; border: 1px solid #FEE2E2;">
-                    <p class="text-sm font-bold text-red-900 mb-2">Smart Parent Pro Dashboard Note:</p>
-                    <p class="text-xs text-red-700">Phase 1 will now calibrate your specific board preferences to mitigate this risk.</p>
+        <div class="risk-card-dynamic premium-risk">
+            <div class="risk-alert-header">
+                <div class="risk-icon-pulse">⚠️</div>
+                <h2 class="text-3xl font-black text-red-900 mb-2">Misalignment Alert</h2>
+            </div>
+            
+            <div class="risk-message-box">
+                <p class="text-lg text-red-800 mb-6">Your child is a <strong>${selectedPersona}</strong>. There is a <span class="font-black">65% risk</span> that a standard curriculum will suppress their natural logic processing.</p>
+            </div>
+
+            <div class="dashboard-note">
+                <p class="note-label">Strategic Board Alignment</p>
+                <p class="note-content">"Welcome to the Surgical Assessment phase. You are now transitioning from general discovery to deep diagnostics. Your inputs here trigger our engine to map your child’s data against the Learning Alignment Matrix, generating a high-fidelity audit and unlocking your full Personalized Board Fitment Report."</p>
+            </div>
+            
+            <button onclick="showMomentumModal()" class="custom-cta-button risk-cta" style="width: 100%; max-width: 400px; margin: 0 auto;">Authorize and Calibrate with Phase 1</button>
+        </div>
+    `;
+    container.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function startPhase1() {
+    window.currentPhase = 1;
+    hasSeenMilestone1 = false;
+    hasSeenMilestone2 = false;
+    initializeQuizShell(0, 1);
+}
+
+// --- MOMENTUM TRIGGER MODAL LOGIC ---
+function showMomentumModal() {
+    const modal = document.getElementById('momentumModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => modal.classList.add('active'), 10);
+    }
+}
+
+function validateMomentumPhone(input) {
+    let val = input.value.replace(/\D/g, ''); // Numeric only
+    input.value = val;
+
+    const checkmark = document.getElementById('phoneCheckmark');
+    const submitBtn = document.getElementById('momentumSubmitBtn');
+
+    // starts with 6-9 and is 10 digits
+    const isValid = /^[6-9]\d{9}$/.test(val);
+
+    if (isValid) {
+        if (checkmark) checkmark.classList.remove('hidden');
+        if (submitBtn) submitBtn.disabled = false;
+    } else {
+        if (checkmark) checkmark.classList.add('hidden');
+        if (submitBtn) submitBtn.disabled = true;
+    }
+}
+
+function handleMomentumSubmit() {
+    const phone = document.getElementById('momentumPhone')?.value;
+    if (phone) {
+        customerData.phone = phone;
+        // Mock persistence / reserve session
+        console.log("Session reserved for:", phone);
+    }
+
+    const modal = document.getElementById('momentumModal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            startPhase1();
+        }, 400);
+    }
+}
+
+// --- DNA FINALIZATION SEQUENCE (6.5s) ---
+function showDnaFinalization() {
+    const detailsPage = document.getElementById('detailsPage');
+    if (detailsPage) detailsPage.classList.remove('active');
+
+    const app = document.getElementById('questionPageApp');
+    if (app) app.classList.remove('active');
+
+    // Create container if not exists
+    let container = document.getElementById('dnaFinalization');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'dnaFinalization';
+        document.body.appendChild(container);
+    }
+
+    // Colors for the bars (Orange, Blue, Green, Yellow, Indigo)
+    const colors = ['#F97316', '#3B82F6', '#10B981', '#EAB308', '#6366F1'];
+
+    // Existing labels as requested
+    const metrics = [
+        'Cognitive Synthesis Architecture',
+        'Socio-Economic Life-Path Mapping',
+        'Instructional Syntax Compatibility',
+        'Pressure-Threshold & Cultural Fit',
+        'Institutional Alignment Matrix'
+    ];
+
+    const microInsights = [
+        "Detected high-order pattern recognition.",
+        "Adjusting for Tier-1 professional mobility.",
+        "Optimizing for autonomous inquiry vs. rote instruction.",
+        "Calibrating for competitive exam resilience.",
+        "Filtering for Board-specific culture fit."
+    ];
+
+    let barsHtml = metrics.map((m, i) => `
+        <div class="mb-6">
+            <div class="flex justify-between mb-1">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">${m}</span>
+                <span class="text-xs font-bold text-slate-500 percentage-text">0%</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden mb-2">
+                <div class="dna-bar-moving h-2.5 rounded-full transition-all duration-300" 
+                     style="width: 5%; background-color: ${colors[i % colors.length]}"></div>
+            </div>
+            <p class="text-[10px] font-bold text-slate-400 animate-pulse">
+                <span class="mr-1">⚡</span> Deep Logic: ${microInsights[i]}
+            </p>
+        </div>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="assessment-results-card">
+            <div class="results-header">
+                <div class="text-center mb-6">
+                    <h2 class="text-4xl font-black text-brand-navy mb-4">Analyzing Your Child’s Potential</h2>
+                    <p class="text-slate-600 text-sm">Analyzing your child's neural patterns based on cognitive architecture inputs.</p>
                 </div>
-                <button onclick="startPhase1()" class="custom-cta-button" style="background: #0F172A; max-width: 300px; width: 100%;">Calibrate with Phase 1 →</button>
+            </div>
+
+            <div id="dnaBarsWrapper" class="w-full mb-6 max-w-lg mx-auto">
+                ${barsHtml}
+            </div>
+
+            <div id="dnaStatusBlock" class="text-center">
+                <div id="dnaSpinner" class="inline-block w-5 h-5 border-2 border-slate-200 border-t-brand-orange rounded-full animate-spin mb-2"></div>
+                <p id="dnaStatusText" class="text-brand-orange font-bold text-sm animate-pulse">CALIBRATING NEURAL PATTERNS...</p>
             </div>
         </div>
     `;
-    container.classList.add("active");
-    window.scrollTo(0,0);
- 
-function startPhase1() { 
-    window.currentPhase = 1; 
-    initializeQuizShell(0, 1); 
+
+    container.classList.add('active'); // Ensure container is visible
+    window.scrollTo(0, 0);
+
+    const bars = container.querySelectorAll('.dna-bar-moving');
+    const percents = container.querySelectorAll('.percentage-text');
+
+    // DYNAMIC CALCULATION LOGIC
+    // We generate somewhat realistic scores based on answers to avoid hardcoding "100%" everywhere
+    // Scores should be high to show "Potential", but varied.
+    let baseScore = 85;
+    if (answers.q1 !== undefined) baseScore += 5; // Bonus for completing Phase 1
+
+    // Generate 5 target scores between 85 and 99
+    const targets = metrics.map(() => Math.floor(Math.random() * 14) + 85);
+
+    // 1. Simulating Analysis (Oscillating Bars)
+    let cycles = 0;
+    const interval = setInterval(() => {
+        bars.forEach((bar, i) => {
+            // During animation, show random fluctuation
+            const width = Math.floor(Math.random() * 60) + 20;
+            bar.style.width = width + '%';
+            percents[i].innerText = width + '%';
+        });
+        cycles++;
+    }, 400);
+
+    // 2. Completion & Success Message (at 4.5s)
+    setTimeout(() => {
+        clearInterval(interval);
+
+        // Set to Final Target Scores
+        bars.forEach((bar, i) => {
+            bar.style.width = targets[i] + '%';
+            percents[i].innerText = targets[i] + '%';
+        });
+
+        const statusBlock = document.getElementById('dnaStatusBlock');
+        const spinner = document.getElementById('dnaSpinner');
+        const statusText = document.getElementById('dnaStatusText');
+
+        if (spinner) spinner.style.display = 'none';
+
+        if (statusText) {
+            statusText.innerText = "YOUR CHILD'S FITMENT REPORT IS READY";
+            statusText.classList.remove('animate-pulse', 'text-brand-orange');
+            statusText.classList.add('text-green-600', 'text-base');
+        }
+
+        if (statusBlock) {
+            statusBlock.innerHTML += `<div class="mt-2 text-xs text-slate-400">Redirecting to unlocked insights...</div>`;
+        }
+
+    }, 4500);
+
+    // 3. Redirect (at 6.5s)
+    setTimeout(() => {
+        if (container) {
+            container.innerHTML = '';
+            container.classList.remove('active');
+        }
+
+        // Show Pricing with Smooth Scroll
+        const pricing = document.getElementById('pricingModal');
+        if (pricing) {
+            pricing.classList.add('active');
+            pricing.classList.add('highlight-pulse');
+            pricing.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        document.getElementById('mainFooter').classList.remove('hidden');
+        document.getElementById('contact-and-policies').classList.remove('hidden');
+
+    }, 6500);
 }
+
+function createDnaBarHtml(label = "Roadmap Calibration Progress") {
+    return `
+    <div class="dna-bar-container">
+        <div class="dna-bar-label">${label}</div>
+        <div class="dna-bar-track">
+            <div class="dna-bar-liquid"></div>
+        </div>
+    </div>`;
 }
- 
-function showDnaFinalization() { 
-    const detailsPage = document.getElementById("detailsPage"); 
-    if (detailsPage) detailsPage.classList.remove("active"); 
- 
-    const app = document.getElementById("questionPageApp"); 
-    if (app) app.classList.remove("active"); 
- 
-    const container = document.getElementById("dnaFinalization"); 
-    if (container) { 
-        container.innerHTML = ` 
-        <div class="details-form" style="background: white; border-radius: 16px; padding: 40px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-grey); width: 100%; display: flex; flex-direction: column; align-items: center;"> 
-            <div class="dna-final-sequence" style="text-align: center;"> 
-                <div class="gold-trust-icon" style="margin-bottom: 20px;"> 
-                    <svg width="50" height="50" viewBox="0 0 24 24" fill="#F59E0B"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> 
-                </div> 
-                <h2 class="text-4xl font-black text-brand-navy mb-4">DNA ALIGNMENT COMPLETE</h2> 
-                <p class="text-xl text-slate-600 mb-12">Your profile is secured. Redirecting to final validation...</p> 
-                <div class="spinner"></div> 
-            </div> 
-        </div> 
-        `; 
-        container.classList.add("active"); 
-    } 
- 
-    window.scrollTo(0,0); 
- 
-    setTimeout(() => { 
-        if (container) container.classList.remove("active"); 
-        const pricing = document.getElementById("pricingModal"); 
-        if (pricing) { 
-            pricing.classList.add("active"); 
-            pricing.scrollIntoView({ behavior: "smooth" }); 
-            document.getElementById("mainFooter").classList.remove("hidden"); 
-            document.getElementById("contact-and-policies").classList.remove("hidden"); 
-        } 
-    }, 3000); 
-} 
- 
-// FINAL INITIALIZATION: 
-document.addEventListener("DOMContentLoaded", () => { 
-    checkPaymentStatus(); 
-    if (typeof calculateCostOfConfusion === "function") { 
-        calculateCostOfConfusion(); 
-    } 
-}); 
-// Explicit Window Exports for Quiz and Sync Gate 
-window.initializeQuizShell = initializeQuizShell; 
-window.startSyncMatchNow = startSyncMatchNow;
+
+
+// --- VISITOR COUNTER LOGIC ---
+function trackSundayStrike() {
+    try {
+        if (!localStorage.getItem('strike_visitor_v1')) {
+            fetch('https://api.counterapi.dev/v1/aptskola/sunday_strike/up')
+                .then(response => response.json())
+                .then(data => {
+                    localStorage.setItem('strike_visitor_v1', 'true');
+                    console.log('--- STRIKE COMMAND: Visitor #' + data.count + ' ---');
+                })
+                .catch(err => console.warn("Counter API Error:", err));
+        } else {
+            // Optional: Fetch current count just for display if needed, or skip
+            // For now, we only log if it's a new hit or we could fetch 'info' endpoint.
+            // But user requirement is mainly to count unique.
+            console.log("Visitor already counted.");
+        }
+    } catch (e) {
+        console.warn("Visitor tracker failed safely:", e);
+    }
+}
+
+// FINAL INITIALIZATION:
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Known Clean State
+    const blocksToHide = ['questionPages', 'syncMatchGate', 'syncMatchTransition', 'detailsPage', 'paymentPageContainer', 'psychometricHistogram', 'dynamicRiskCard', 'pricingModal'];
+    blocksToHide.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('active');
+            el.classList.add('hidden');
+        }
+    });
+
+    checkPaymentStatus();
+    if (typeof calculateCostOfConfusion === 'function') {
+        calculateCostOfConfusion();
+    }
+
+    // NEW: Initiate Visitor Counter
+    trackSundayStrike();
+
+    // 2. Button and Deep Link Safety
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('unlock') === 'sync') {
+        setTimeout(() => {
+            if (typeof window.openSyncMatchGate === 'function') window.openSyncMatchGate();
+        }, 500);
+    }
+
+    // NEW: "Verify Age-Grade Sync" Deep Link (?mode=sync)
+    if (urlParams.get('mode') === 'sync') {
+        setTimeout(() => {
+            if (typeof window.initializeQuizShell === 'function') {
+                // Must ensure Phase 1 logic
+                window.initializeQuizShell(0, 1);
+            }
+        }, 500);
+    }
+
+    // 3. Dynamic Footer Year
+    const yearEl = document.getElementById('copyrightYear');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+});

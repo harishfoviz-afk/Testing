@@ -31,12 +31,13 @@
 
         // Momentum Feature 2: Progressive Slide-In (Nudge)
         useEffect(() => {
-            const timer = setTimeout(() => setShowToast(true), 5000);
-            return () => clearTimeout(timer);
+            // const timer = setTimeout(() => setShowToast(true), 5000); // HIDDEN BY USER REQUEST
+            // return () => clearTimeout(timer);
         }, []);
 
         const triggerStart = (startAtIndex = 0) => {
             console.log("[Hero] Trigger Start Clicked. Index:", startAtIndex);
+            if (window.triggerTrack) window.triggerTrack('Scan_Initiated');
             if (typeof window.initializeQuizShell === 'function') {
                 window.initializeQuizShell(startAtIndex);
             } else {
@@ -77,21 +78,9 @@
 
         // --- RENDER HELPERS ---
 
-        // 1. Top Buttons
+        // 1. Top Buttons (Removed)
         const renderTopButtons = () => {
-            return h('div', { className: "absolute top-6 right-6 flex flex-col md:flex-row gap-4 z-[1000]" },
-                h('button', {
-                    onClick: () => window.openSyncMatchGate && window.openSyncMatchGate(),
-                    className: "text-xs font-bold text-slate-400 border border-slate-700/50 px-5 py-2 rounded-full hover:bg-slate-800 transition backdrop-blur-sm shadow-xl",
-                    style: { background: 'rgba(30, 41, 59, 0.4)', cursor: 'pointer' }
-                }, "Unlock Parent & Child Sync Check"),
-                h('a', {
-                    href: "https://xray.aptskola.com",
-                    target: "_blank",
-                    className: "text-xs font-bold text-slate-400 border border-slate-700/50 px-5 py-2 rounded-full hover:bg-slate-800 transition backdrop-blur-sm shadow-xl text-center",
-                    style: { background: 'rgba(30, 41, 59, 0.4)' }
-                }, "🔎 School/College Forensic Report")
-            );
+            return h('div', { className: "absolute top-6 right-6 z-[1000]" });
         };
 
         // 2. Branding
@@ -112,15 +101,16 @@
         const renderHeadline = () => {
             const currentSlide = slides[index];
             return h('div', { className: "flex flex-col items-center justify-center gap-4 min-h-[160px]" },
-                h('div', { className: "flex items-center gap-4 md:gap-8" },
+                // STABILIZED ANIMATION CONTAINER
+                h('div', { className: "flex items-center gap-4 md:gap-8 h-[120px] overflow-hidden mb-6" },
                     h(AnimatePresence, { mode: "wait" },
                         h(motion.div, {
-                            key: index, // Key by index to enforce full re-render of the pair
+                            key: index,
                             initial: { y: 20, opacity: 0 },
                             animate: { y: 0, opacity: 1 },
                             exit: { y: -20, opacity: 0 },
                             transition: { duration: 0.3, ease: "easeOut" },
-                            className: "flex items-center gap-4 md:gap-8"
+                            className: "flex items-center gap-4 md:gap-8 min-w-[300px] justify-center"
                         },
                             h('span', { className: `text-5xl md:text-8xl font-black ${currentSlide.pColor}` }, currentSlide.prefix),
                             h('span', { className: `text-5xl md:text-8xl font-black ${currentSlide.wColor}` }, currentSlide.word)
@@ -128,7 +118,11 @@
                     )
                 ),
                 h('div', { className: "text-center px-4 max-w-5xl mx-auto mt-6" },
-                    h('h1', { className: "text-2xl md:text-4xl font-extrabold text-[#FF6B35] leading-[1.3] mb-4 tracking-tight" }, "School Board Selection is a 15-Year Financial & Academic Commitment."),
+                    h('h1', { className: "text-2xl md:text-4xl font-bold text-[#FF6B35] leading-[1.3] mb-4 tracking-tight" },
+                        "School Board Selection is a ",
+                        h('span', { style: { fontFamily: 'Arial, sans-serif' } }, "15"),
+                        " Year Financial & Academic Commitment."
+                    ),
                     h('p', { className: "text-lg md:text-xl font-bold text-white tracking-wide leading-relaxed" },
                         "Is your child's Age, Grade, and Learning Style in perfect ",
                         h('span', { className: "text-[#FF6B35] font-bold" }, "sync"),
@@ -138,46 +132,38 @@
             );
         };
 
-        // 4. Subtext (Value Proposition)
+        // 4. Subtext (Value Proposition) - REMOVED (Moved to below CTA)
         const renderSubtext = () => {
-            return h('p', { className: "text-slate-400 text-lg md:text-2xl text-center max-w-3xl mx-auto mt-12 leading-relaxed font-medium" },
-                "Stop the guesswork. Audit your child's alignment with NEP 2026 standards and find the Board that fits their future—and your budget."
-            );
+            return null;
         };
 
         // 5. Social Proof
         const renderSocialProof = () => {
-            return h('div', { className: "mt-12 flex flex-col items-center gap-4" },
-                h('div', { className: "flex -space-x-4" },
-                    [1, 2, 3, 4, 5].map(i =>
-                        h('div', { key: i, className: "w-12 h-12 rounded-full border-4 border-[#0F172A] bg-slate-700 flex items-center justify-center text-white font-bold text-xs overflow-hidden" },
-                            h('img', { src: `https://i.pravatar.cc/100?img=${i + 10}`, className: "w-full h-full object-cover", alt: "Parent Avatar" })
-                        )
-                    ),
-                    h('div', { className: "w-12 h-12 rounded-full border-4 border-[#0F172A] bg-[#FF6B35] flex items-center justify-center text-white font-black text-xs" }, "1K+")
-                ),
-                h('p', { className: "text-slate-500 text-sm font-bold uppercase tracking-widest" }, "Joined by 1,000+ parents this week")
+            return h('div', { className: "mt-6 flex flex-col items-center gap-4" },
+                h('div', { className: "hidden" }), // Avatars Removed
+                h('p', {
+                    className: "text-slate-500 text-xs md:text-sm font-light uppercase tracking-[0.2em] opacity-80",
+                    style: { fontFamily: "'Inter', sans-serif" }
+                }, "Joined by 1,000+ parents this week")
             );
         };
 
         // 6. CTA Button (Split Action)
         const renderCTA = () => {
-            return h('div', { className: "relative mt-16 z-[40] flex flex-col md:flex-row gap-4 items-center w-full max-w-2xl px-4" },
+            return h('div', { className: "relative mt-8 z-[40] flex flex-col gap-4 items-center w-full max-w-2xl px-4" },
                 // Primary Button
-                h('div', { className: "relative group w-full md:w-auto flex-1" },
+                h('div', { className: "relative group w-full md:w-auto" },
                     h('div', { className: "absolute -inset-1 bg-gradient-to-r from-[#FF6B35] to-yellow-500 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000" }),
                     h('button', {
                         onClick: () => triggerStart(0),
-                        className: "unstoppable-cta w-full relative bg-[#FF6B35] text-white px-6 py-4 rounded-full font-black text-lg md:text-xl shadow-xl hover:scale-105 active:scale-95 transition-all border-b-[4px] border-orange-800 flex items-center justify-center gap-2",
+                        className: "unstoppable-cta neural-pulse w-full relative bg-[#FF6B35] text-white px-8 py-5 rounded-full font-black text-xl md:text-2xl shadow-none haptic-shadow overflow-hidden transition-all duration-300 ease-out border-b-[4px] border-orange-800 flex items-center justify-center gap-2",
                         style: { pointerEvents: 'auto' }
-                    }, `Start ${targetYear} Grade 1 Roadmap`, h('span', { className: "animate-pulse" }, "→"))
+                    },
+                        // Radar Sweep Light
+                        h('div', { className: "radar-beam" }),
+                        "Initiate Forensic Sync Scan",
+                        h('span', { className: "animate-pulse" }, "→"))
                 ),
-                // Secondary Button (Ghost/Utility)
-                h('button', {
-                    onClick: () => window.handleCostCalculatorClick ? window.handleCostCalculatorClick() : console.log("Calc not found"),
-                    className: "w-full md:w-auto flex-1 px-6 py-4 rounded-full font-bold text-slate-300 border-2 border-slate-600 hover:border-[#FF6B35] hover:text-[#FF6B35] hover:bg-slate-800/50 transition-all text-lg md:text-xl flex items-center justify-center gap-2",
-                    style: { pointerEvents: 'auto' }
-                }, "Calculate My 'Cost of Confusion' ¥")
             );
         };
 
@@ -227,7 +213,7 @@
         };
 
         return h(Fragment, {},
-            h('section', { className: "relative pt-32 pb-20 px-4 overflow-hidden bg-[#0F172A] min-h-[95vh] flex flex-col items-center" },
+            h('section', { className: "relative pt-16 pb-20 px-4 overflow-hidden bg-[#0F172A] min-h-[95vh] flex flex-col items-center" },
                 renderTopButtons(),
                 renderBranding(),
                 renderHeadline(),
@@ -236,6 +222,29 @@
                 renderCTA(),
                 renderRoadmapText(),
                 renderQuestionEmbed(),
+                // Moved Text (Orange)
+                h('p', { className: "text-[#FF6B35] text-lg md:text-xl text-center max-w-3xl mx-auto mt-8 mb-4 leading-relaxed font-bold" },
+                    "Stop the guesswork. Audit your child's alignment with NEP standards and find the Board that fits their future—and your budget."
+                ),
+                // New Buttons After Phase 0
+                h('div', { className: "flex flex-col md:flex-row gap-4 justify-center items-center mt-8 w-full max-w-4xl px-4 animate-fade-in-up" },
+                    // 1. Calculator
+                    h('button', {
+                        onClick: () => window.handleCostCalculatorClick && window.handleCostCalculatorClick(),
+                        className: "px-5 py-3 rounded-full font-bold text-slate-300 border border-slate-600 hover:border-[#FF6B35] hover:text-[#FF6B35] hover:bg-slate-800/50 transition-all text-sm md:text-base flex items-center gap-2"
+                    }, "Calculate 'School Switch'"),
+                    // 2. Sync Check
+                    h('button', {
+                        onClick: () => window.openSyncMatchGate && window.openSyncMatchGate(),
+                        className: "px-5 py-3 rounded-full font-bold text-slate-300 border border-slate-600 hover:border-[#FF6B35] hover:text-[#FF6B35] hover:bg-slate-800/50 transition-all text-sm md:text-base flex items-center gap-2"
+                    }, "Unlock Parent & Child Sync Check"),
+                    // 3. Forensic Report
+                    h('a', {
+                        href: "https://xray.aptskola.com",
+                        target: "_blank",
+                        className: "px-5 py-3 rounded-full font-bold text-slate-300 border border-slate-600 hover:border-[#FF6B35] hover:text-[#FF6B35] hover:bg-slate-800/50 transition-all text-sm md:text-base flex items-center gap-2 text-center no-underline"
+                    }, "🔎 School/College Forensic Report")
+                ),
                 h('div', { className: "absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[150px] pointer-events-none" }),
                 h('div', { className: "absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[180px] pointer-events-none" })
             ),

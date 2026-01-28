@@ -5,7 +5,7 @@ const { motion, AnimatePresence } = window.Motion || window.FramerMotion || {};
 const Hero = () => {
   const words = ["Worrying", "Doubting", "Guessing", "Knowing"];
   const [index, setIndex] = useState(0);
-  const [buttonText, setButtonText] = useState("Access Public Audit: Initiate Forensic Momentum Scan");
+  const [buttonText, setButtonText] = useState("Initiate Forensic Sync Scan");
   const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
@@ -15,8 +15,8 @@ const Hero = () => {
 
   // Momentum Feature 2: Progressive Slide-In (Nudge)
   useEffect(() => {
-    const timer = setTimeout(() => setShowToast(true), 5000);
-    return () => clearTimeout(timer);
+    // const timer = setTimeout(() => setShowToast(true), 5000); // HIDDEN BY USER REQUEST
+    // return () => clearTimeout(timer);
   }, []);
 
   const triggerStart = (startAtIndex = 0) => {
@@ -66,22 +66,8 @@ const Hero = () => {
       <section className="relative pt-32 pb-20 px-4 overflow-hidden bg-[#0F172A] min-h-[95vh] flex flex-col items-center">
 
         {/* 1. Top Right Shadow Buttons - Restored with Light, Non-Eye-Catchy Colors */}
-        <div className="absolute top-6 right-6 flex flex-col md:flex-row gap-4 z-[1000]">
-          <button
-            onClick={() => window.openSyncMatchGate && window.openSyncMatchGate()}
-            className="text-xs font-bold text-slate-400 border border-slate-700/50 px-5 py-2 rounded-full hover:bg-slate-800 transition backdrop-blur-sm shadow-xl"
-            style={{ background: 'rgba(30, 41, 59, 0.4)', cursor: 'pointer' }}
-          >
-            Unlock Parent & Child Sync Check
-          </button>
-          <a
-            href="https://xray.aptskola.com"
-            target="_blank"
-            className="text-xs font-bold text-slate-400 border border-slate-700/50 px-5 py-2 rounded-full hover:bg-slate-800 transition backdrop-blur-sm shadow-xl text-center"
-            style={{ background: 'rgba(30, 41, 59, 0.4)' }}
-          >
-            🔎 School/College Forensic Report
-          </a>
+        {/* 1. Top Right Navigation (Removed) */}
+        <div className="absolute top-6 right-6 z-[1000]">
         </div>
 
         {/* 2. Centered Branding Block */}
@@ -153,8 +139,10 @@ const Hero = () => {
           >
             {buttonText} <span className="animate-pulse inline-block text-3xl md:text-4xl">→</span>
           </button>
-          <div className="text-center mt-4">
-            <p className="text-slate-400 text-xs italic">*Baseline Diagnostic Fees waived for current [CITY] Cluster Window.</p>
+          <div className="text-center mt-6">
+            <p className="text-slate-400 text-lg md:text-xl text-center max-w-3xl mx-auto leading-relaxed font-medium">
+              Stop the guesswork. Audit your child's alignment with NEP standards and find the Board that fits their future—and your budget.
+            </p>
           </div>
         </div>
 
@@ -180,6 +168,32 @@ const Hero = () => {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* New Button Location (After Phase 0) */}
+        <div className="flex flex-col md:flex-row gap-4 justify-center items-center mt-8 w-full max-w-4xl px-4 animate-fade-in-up">
+          {/* 1. Calculator */}
+          <button
+            onClick={() => window.handleCostCalculatorClick && window.handleCostCalculatorClick()}
+            className="px-5 py-3 rounded-full font-bold text-slate-300 border border-slate-600 hover:border-[#FF6B35] hover:text-[#FF6B35] hover:bg-slate-800/50 transition-all text-sm md:text-base flex items-center gap-2"
+          >
+            Calculate 'School Switch'
+          </button>
+          {/* 2. Sync Check */}
+          <button
+            onClick={() => window.openSyncMatchGate && window.openSyncMatchGate()}
+            className="px-5 py-3 rounded-full font-bold text-slate-300 border border-slate-600 hover:border-[#FF6B35] hover:text-[#FF6B35] hover:bg-slate-800/50 transition-all text-sm md:text-base flex items-center gap-2"
+          >
+            Unlock Parent & Child Sync Check
+          </button>
+          {/* 3. Forensic Report */}
+          <a
+            href="https://xray.aptskola.com"
+            target="_blank"
+            className="px-5 py-3 rounded-full font-bold text-slate-300 border border-slate-600 hover:border-[#FF6B35] hover:text-[#FF6B35] hover:bg-slate-800/50 transition-all text-sm md:text-base flex items-center gap-2 text-center no-underline"
+          >
+            🔎 School/College Forensic Report
+          </a>
         </div>
 
         {/* Background Atmosphere */}

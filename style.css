@@ -1749,3 +1749,11 @@ footer .policy-links a {
     background: white;
     border-radius: 50%;
 }
+
+/* Neural Pulse Animation (Breathing Glow) */
+@keyframes neuralPulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.7); }
+    70% { box-shadow: 0 0 0 20px rgba(255, 107, 53, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0); }
+}
+.neural-pulse { animation: neuralPulse 2s infinite ease-in-out; }
